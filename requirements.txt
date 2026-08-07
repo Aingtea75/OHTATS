@@ -1,0 +1,13 @@
+# Production Dependencies
+
+fastapi
+uvicorn
+pydantic
+pandas
+numpy
+sqlalchemy
+python-dotenv
+requests
+openai
+loguru
+mcp

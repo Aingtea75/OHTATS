@@ -1,0 +1,50 @@
+#################################################
+# OHTATS - Git Ignore
+#################################################
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual Environment
+.venv/
+venv/
+
+# Environment
+.env
+
+# VS Code
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite3
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Python Cache
+.pytest_cache/
+.mypy_cache/
+
+# Build
+build/
+dist/
+
+# MT4
+*.ex4
+*.ex5
+
+# Temporary
+*.tmp
+*.bak
+
+# Git
+.git-credentials

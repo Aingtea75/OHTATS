@@ -1,0 +1,8 @@
+# Development Dependencies
+
+pytest
+watchdog
+black
+ruff
+mypy
+pre-commit
