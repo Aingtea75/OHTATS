@@ -1,2884 +1,2594 @@
 # DATABASE_DESIGN.md
 
-# OHTATS Database Design
+# OHTATS Database Design --- FINAL
 
-> Dokumen ini menjelaskan rancangan database untuk platform **OH-TRADER AI Trading System (OHTATS)**.
+> Status: **FINAL DATABASE BLUEPRINT**
+>
+> Dokumen ini adalah rancangan database logical/physical-neutral OHTATS.
+> Implementasi SQL, migration, ORM, dan storage engine harus mengikuti
+> aturan dalam dokumen ini.
+>
+> Prinsip utama: **database transaction tidak boleh dipaksa menjadi
+> tempat seluruh data real-time/high-volume**. Market data historis
+> dapat menggunakan object/time-series storage dengan metadata dan
+> versioning tetap direferensikan oleh database.
 
-Database dirancang sebagai fondasi utama platform agar mampu mendukung:
-
-- operasi trading multi-platform,
-- integrasi berbagai AI Provider,
-- Workflow Automation,
-- Plugin System,
-- Audit dan Logging,
-- Backtesting,
-- Copy Trading,
-- skalabilitas enterprise,
-- serta pengembangan fitur di masa depan.
-
-Dokumen ini menjadi acuan resmi implementasi database OHTATS.
----
+------------------------------------------------------------------------
 
 # 1. Tujuan
 
-Database OHTATS dirancang untuk menyimpan seluruh informasi yang diperlukan oleh sistem secara konsisten, aman, dan mudah dikembangkan.
+Database OHTATS harus mendukung:
 
-Database harus mampu mendukung:
+-   multi-user;
+-   multi-broker;
+-   multi-account;
+-   MT4;
+-   MT5;
+-   TradingView;
+-   broker/exchange API;
+-   multi-AI provider/model;
+-   strategy dan strategy versioning;
+-   risk management;
+-   live trading;
+-   backtesting reproducible;
+-   workflow automation;
+-   copy trading;
+-   plugin system;
+-   notification;
+-   licensing/subscription;
+-   audit dan security;
+-   API/MCP access;
+-   scheduler/job;
+-   backup/recovery;
+-   extensibility.
 
-- Multi User
-- Multi Broker
-- Multi Trading Account
-- Multi Platform (MT4, MT5, TradingView)
-- Multi AI Provider
-- Multi Workflow
-- Plugin System
-- Audit Trail
-- Logging
-- Notification
-- Backtesting
-- Copy Trading
-- Scalability
-- Security
-- High Availability
+Database adalah **source of record untuk state bisnis dan histori yang
+memang harus dipersistenkan**, bukan source of record untuk setiap cache
+atau stream real-time.
 
----
+------------------------------------------------------------------------
 
 # 2. Prinsip Desain
 
-Database OHTATS dibangun berdasarkan prinsip:
-
-- Modular Architecture
-- Data Normalization (hingga minimal Third Normal Form/3NF)
-- Scalability
-- Maintainability
-- Auditability
-- Security by Design
-- Performance Optimization
-- Backup & Recovery
-- High Availability Ready
-- Extensibility
-- Menghindari duplikasi data.
-
----
-
-# 3. Domain Data
-
-Domain utama OHTATS meliputi:
-
-- User Management
-- Security
-- Trading
-- Broker Integration
-- AI Engine
-- Strategy
-- Risk Management
-- Workflow Engine
-- Plugin System
-- Notification
-- Audit & Logging
-- Configuration
-- Licensing
-- Subscription
-- External Integration
-- API Management
-- Backup & Recovery
-- Scheduler & Job Queue
-- Market Data
-- Backtesting
-- Copy Trading
-
----
-
-# 4. Entitas Utama (Core Business Entities)
-
-Berdasarkan domain sistem yang telah ditentukan, OHTATS memiliki entitas bisnis utama (Core Business Entities) sebagai fondasi seluruh proses operasional platform.
-
-Entitas-entitas ini menggambarkan objek bisnis utama yang akan direpresentasikan ke dalam satu atau lebih tabel pada desain database.
-
----
-
-## 4.1 User
-
-Mewakili pengguna sistem OHTATS.
-
-Setiap pengguna memiliki identitas unik dan hak akses sesuai Role (Peran) yang dimilikinya.
-
-Seorang User dapat memiliki:
-
-- Satu atau lebih Trading Account
-- Satu atau lebih Strategy
-- AI Session
-- Plugin
-- License
-- Subscription
-- Notification
-- Riwayat aktivitas pada Audit Log
-
----
-
-## 4.2 Trading Account
-
-Mewakili akun trading yang terhubung ke OHTATS.
-
-Satu User dapat memiliki lebih dari satu Trading Account yang berasal dari broker yang sama maupun broker yang berbeda.
-
-Trading Account menjadi pusat seluruh aktivitas trading pada sistem.
-
----
-
-## 4.3 Broker
-
-Mewakili broker atau penyedia layanan trading yang digunakan oleh pengguna.
-
-Contoh:
-
-- MetaTrader Broker
-- Broker API
-- Crypto Exchange
-- Futures Broker
-
-Broker menyediakan akses terhadap:
-
-- Order
-- Position
-- Deal
-- Market Data
-- Informasi Akun Trading
-
----
-
-## 4.4 Strategy
-
-Mewakili strategi trading yang digunakan untuk mengambil keputusan transaksi.
-
-Satu Strategy dapat digunakan oleh satu atau lebih Trading Account sesuai konfigurasi pengguna.
-
-Strategy dapat dijalankan:
-
-- Secara Manual
-- Menggunakan Expert Advisor (EA)
-- Menggunakan Workflow
-- Menggunakan AI Engine
-
----
-
-## 4.5 Trade
-
-Trade merupakan aktivitas perdagangan (Trading Activity) secara konseptual.
-
-Pada implementasi database OHTATS, Trade direpresentasikan melalui beberapa entitas yang saling berhubungan, yaitu:
-
-- Orders
-- Positions
-- Deals
-
-Pendekatan ini dipilih agar sistem mampu mendukung berbagai platform trading seperti MT4, MT5, Broker API, maupun integrasi platform lain di masa mendatang.
-
-Setiap Trade selalu berhubungan dengan:
-
-- Trading Account
-- Broker
-- Strategy
-- Risk Management
-- Symbol
-
----
-
-### 4.5.1 Trading Symbol
-
-Mewakili instrumen atau aset yang diperdagangkan.
-
-Contoh:
-
-- EURUSD
-- GBPUSD
-- USDJPY
-- XAUUSD
-- BTCUSD
-- ETHUSD
-- NAS100
-- US30
-
-Setiap aktivitas Trade selalu mengacu pada satu Symbol.
-
----
-
-## 4.6 Position
-
-Mewakili posisi trading yang sedang berjalan maupun yang telah ditutup.
-
-Position merupakan hasil dari eksekusi Order dan menjadi dasar perhitungan:
-
-- Floating Profit/Loss
-- Swap
-- Commission
-- Risk Monitoring
-
----
-
-## 4.7 AI Session
-
-Menyimpan riwayat interaksi antara pengguna dengan AI Provider.
-
-AI Session digunakan untuk:
-
-- Analisis Market
-- Konsultasi Strategy
-- Evaluasi Trading
-- Pengambilan Keputusan berbasis AI
-- Aktivitas AI lainnya
-
----
-
-## 4.8 Backtest
-
-Menyimpan hasil pengujian Strategy menggunakan data historis.
-
-Backtest digunakan untuk mengevaluasi performa Strategy sebelum digunakan pada akun trading nyata.
-
----
-
-## 4.9 Plugin
-
-Mewakili modul atau komponen tambahan yang dapat dipasang pada OHTATS untuk memperluas fungsionalitas sistem tanpa mengubah inti aplikasi.
-
----
-
-## 4.10 Notification
-
-Menyimpan seluruh riwayat notifikasi yang dikirimkan kepada pengguna.
-
-Notifikasi dapat berasal dari:
-
-- AI Engine
-- Trading Engine
-- Workflow
-- System
-- Plugin
-
----
-
-## 4.11 Audit Log
-
-Menyimpan seluruh aktivitas penting yang terjadi di dalam sistem.
-
-Audit Log digunakan untuk:
-
-- Audit Keamanan
-- Pelacakan Aktivitas
-- Troubleshooting
-- Compliance
-- Investigasi
-
----
-
-## 4.12 System Configuration
-
-Menyimpan seluruh konfigurasi global sistem yang dapat dikelola oleh Administrator.
-
-Konfigurasi ini menjadi dasar pengaturan berbagai modul OHTATS, termasuk:
-
-- AI Engine
-- Trading Engine
-- Workflow
-- Plugin
-- Notification
-- Security
-- Fitur Sistem lainnya
-
-# 5. Hubungan Antar Entitas (Entity Relationships)
-
-Hubungan antar entitas dirancang untuk menjaga integritas data, menghindari duplikasi data, serta memastikan seluruh modul OHTATS dapat saling berinteraksi secara konsisten.
-
-Hubungan antar entitas pada dokumen ini menggambarkan hubungan konseptual antar objek bisnis. Implementasi teknis hubungan tersebut dijelaskan lebih rinci pada bagian desain tabel dan ERD.
-
----
-
-## 5.1 User
-
-Satu User dapat memiliki:
-
-- Banyak Trading Account
-- Banyak Strategy
-- Banyak AI Session
-- Banyak Backtest
-- Banyak Notification
-- Banyak API Key
-- Banyak License
-- Banyak Audit Log
-
-Relasi:
-
+1.  Gunakan UUID untuk primary key entity bisnis.
+2.  Gunakan BIGINT atau time-sortable identifier untuk data volume
+    sangat tinggi bila dibutuhkan.
+3.  Terapkan normalisasi minimal sampai 3NF untuk master/transactional
+    data.
+4.  Gunakan foreign key untuk hubungan yang benar-benar bersifat
+    referensial.
+5.  Jangan membuat foreign key ke entity yang tidak didefinisikan.
+6.  Jangan menjadikan nama simbol broker sebagai canonical instrument.
+7.  Jangan menyimpan secret/password/API key plaintext.
+8.  Data historis finansial dan audit bersifat append-only.
+9.  Entity konfigurasi dapat menggunakan soft delete bila diperlukan.
+10. Jangan menggunakan soft delete untuk histori transaksi immutable.
+11. Semua timestamp disimpan dalam UTC; timezone pengguna disimpan
+    sebagai atribut profile/settings.
+12. Monetary/price/quantity fields menggunakan DECIMAL, bukan floating
+    point.
+13. JSON hanya digunakan untuk metadata/configuration yang memang
+    fleksibel, bukan untuk data relasional inti.
+14. Setiap strategy yang dapat dieksekusi harus mempunyai immutable
+    version.
+15. Backtest harus menunjuk strategy version dan dataset version yang
+    dapat direproduksi.
+16. Broker, platform, instrument, dan broker-specific symbol dipisahkan.
+17. Module tidak otomatis berarti table.
+18. Cache, queue, websocket state, dan transient runtime state tidak
+    wajib dipersistenkan.
+19. Constraint dan index harus mendukung workload nyata, bukan dibuat
+    sebanyak mungkin.
+20. Migration harus backward-aware dan dapat diaudit.
+
+------------------------------------------------------------------------
+
+# 3. Konvensi
+
+## 3.1 Naming
+
+-   table: `snake_case`, plural.
+-   column: `snake_case`.
+-   primary key: `id`.
+-   foreign key: `<entity>_id`.
+-   timestamp: `created_at`, `updated_at`.
+-   soft delete: `deleted_at`.
+-   boolean: `is_*` atau `has_*`.
+-   code yang menjadi identifier bisnis: `*_code`.
+-   external identifier: `*_external_id` atau nama spesifik provider.
+-   semua FK menunjuk ke `id` entity tujuan kecuali ada alasan kuat.
+
+## 3.2 Status
+
+Status harus didefinisikan per domain. Jangan memakai satu ENUM global
+untuk seluruh tabel.
+
+## 3.3 Audit columns
+
+Entity mutable umumnya memiliki:
+
+-   `created_at`
+-   `updated_at`
+
+Entity yang membutuhkan soft delete:
+
+-   `deleted_at`
+
+Event/historical record minimal memiliki:
+
+-   `occurred_at`
+-   `created_at`
+
+------------------------------------------------------------------------
+
+# 4. Domain Catalog
+
+## Identity & Security
+
+1.  `users`
+2.  `user_profiles`
+3.  `roles`
+4.  `permissions`
+5.  `user_roles`
+6.  `role_permissions`
+7.  `sessions`
+8.  `api_keys`
+9.  `security_events`
+10. `audit_logs`
+
+## Broker & Connectivity
+
+11. `brokers`
+12. `platforms`
+13. `broker_platforms`
+14. `connections`
+
+## Instrument & Market Data
+
+15. `instrument_types`
+16. `instruments`
+17. `broker_symbols`
+18. `symbol_mappings`
+19. `market_data_sources`
+20. `market_data_datasets`
+21. `market_data_bars`
+22. `market_data_ticks`
+
+## Trading
+
+23. `trading_accounts`
+24. `account_balance_snapshots`
+25. `trading_requests`
+26. `orders`
+27. `order_events`
+28. `order_executions`
+29. `deals`
+30. `positions`
+31. `position_events`
+32. `trading_journals`
+
+## Strategy & Risk
+
+33. `strategies`
+34. `strategy_versions`
+35. `strategy_parameters`
+36. `strategy_deployments`
+37. `risk_policies`
+38. `risk_rules`
+39. `risk_events`
+
+## Backtest
+
+40. `backtests`
+41. `backtest_runs`
+42. `backtest_trades`
+43. `backtest_metrics`
+
+## AI
+
+44. `ai_providers`
+45. `ai_models`
+46. `ai_provider_models`
+47. `ai_sessions`
+48. `ai_messages`
+49. `ai_requests`
+50. `ai_responses`
+51. `ai_analyses`
+52. `ai_decisions`
+53. `prompt_templates`
+54. `prompt_versions`
+55. `ai_usage_records`
+
+## Workflow
+
+56. `workflows`
+57. `workflow_versions`
+58. `workflow_steps`
+59. `workflow_executions`
+60. `workflow_execution_steps`
+
+## Copy Trading
+
+61. `copy_trade_groups`
+62. `copy_trade_masters`
+63. `copy_trade_followers`
+64. `copy_trade_rules`
+65. `copy_trade_mappings`
+66. `copy_trade_executions`
+
+## Plugin
+
+67. `plugins`
+68. `plugin_versions`
+69. `plugin_dependencies`
+70. `plugin_installations`
+
+## Licensing
+
+71. `subscription_plans`
+72. `subscription_plan_versions`
+73. `subscriptions`
+74. `licenses`
+75. `license_entitlements`
+
+## Notification & Integration
+
+76. `notifications`
+77. `notification_deliveries`
+78. `external_integrations`
+79. `integration_credentials`
+
+## Operations
+
+80. `system_settings`
+81. `feature_flags`
+82. `jobs`
+83. `job_executions`
+84. `api_usage_records`
+85. `backup_records`
+86. `system_events`
+
+------------------------------------------------------------------------
+
+# 5. Identity & Security
+
+## 5.1 users
+
+Purpose: canonical OHTATS user identity.
+
+Columns:
+
+  Column              Type           Rules
+  ------------------- -------------- ----------------------------
+  id                  UUID           PK
+  username            VARCHAR(100)   UNIQUE, NOT NULL
+  email               VARCHAR(255)   UNIQUE, NOT NULL
+  password_hash       VARCHAR(255)   nullable for external auth
+  status              VARCHAR(30)    NOT NULL
+  email_verified_at   DATETIME       nullable
+  last_login_at       DATETIME       nullable
+  created_at          DATETIME       NOT NULL
+  updated_at          DATETIME       NOT NULL
+  deleted_at          DATETIME       nullable
+
+Never store plaintext password.
+
+Indexes: PK(`id`), UNIQUE(`username`), UNIQUE(`email`), INDEX(`status`).
+
+## 5.2 user_profiles
+
+  Column         Type           Rules
+  -------------- -------------- ------------------
+  id             UUID           PK
+  user_id        UUID           FK users, UNIQUE
+  display_name   VARCHAR(150)   nullable
+  first_name     VARCHAR(100)   nullable
+  last_name      VARCHAR(100)   nullable
+  timezone       VARCHAR(64)    nullable
+  locale         VARCHAR(20)    nullable
+  avatar_url     VARCHAR(500)   nullable
+  created_at     DATETIME       NOT NULL
+  updated_at     DATETIME       NOT NULL
+
+## 5.3 roles
+
+  Column           Type           Rules
+  ---------------- -------------- ----------
+  id               UUID           PK
+  code             VARCHAR(80)    UNIQUE
+  name             VARCHAR(120)   NOT NULL
+  description      TEXT           nullable
+  is_system_role   BOOLEAN        NOT NULL
+  status           VARCHAR(30)    NOT NULL
+  created_at       DATETIME       NOT NULL
+  updated_at       DATETIME       NOT NULL
+
+Examples: `SUPER_ADMIN`, `ADMINISTRATOR`, `TRADER`, `VIEWER`,
+`DEVELOPER`.
+
+## 5.4 permissions
+
+Atomic permission such as `orders.read`, `orders.create`,
+`orders.cancel`, `strategies.deploy`, `ai.use`, `licenses.manage`.
+
+  Column        Type           Rules
+  ------------- -------------- ----------
+  id            UUID           PK
+  code          VARCHAR(150)   UNIQUE
+  name          VARCHAR(150)   NOT NULL
+  resource      VARCHAR(100)   NOT NULL
+  action        VARCHAR(100)   NOT NULL
+  description   TEXT           nullable
+  created_at    DATETIME       NOT NULL
+  updated_at    DATETIME       NOT NULL
+
+## 5.5 user_roles
+
+  Column        Type       Rules
+  ------------- ---------- --------------------
+  user_id       UUID       FK users
+  role_id       UUID       FK roles
+  assigned_at   DATETIME   NOT NULL
+  assigned_by   UUID       FK users, nullable
+  expires_at    DATETIME   nullable
+
+PK(`user_id`, `role_id`).
+
+## 5.6 role_permissions
+
+  Column          Type       Rules
+  --------------- ---------- --------------------
+  role_id         UUID       FK roles
+  permission_id   UUID       FK permissions
+  granted_at      DATETIME   NOT NULL
+  granted_by      UUID       FK users, nullable
+
+PK(`role_id`, `permission_id`).
+
+## 5.7 sessions
+
+  Column               Type           Rules
+  -------------------- -------------- ----------
+  id                   UUID           PK
+  user_id              UUID           FK users
+  token_hash           VARCHAR(255)   NOT NULL
+  refresh_token_hash   VARCHAR(255)   nullable
+  ip_address           VARCHAR(64)    nullable
+  user_agent           TEXT           nullable
+  device_id            VARCHAR(255)   nullable
+  status               VARCHAR(30)    NOT NULL
+  created_at           DATETIME       NOT NULL
+  last_activity_at     DATETIME       NOT NULL
+  expires_at           DATETIME       NOT NULL
+  revoked_at           DATETIME       nullable
+
+Never store session token plaintext.
+
+## 5.8 api_keys
+
+  Column         Type           Rules
+  -------------- -------------- ----------
+  id             UUID           PK
+  user_id        UUID           FK users
+  name           VARCHAR(120)   NOT NULL
+  key_prefix     VARCHAR(32)    NOT NULL
+  key_hash       VARCHAR(255)   NOT NULL
+  status         VARCHAR(30)    NOT NULL
+  last_used_at   DATETIME       nullable
+  expires_at     DATETIME       nullable
+  created_at     DATETIME       NOT NULL
+  revoked_at     DATETIME       nullable
+
+Never store the full API key.
+
+## 5.9 security_events
+
+Append-only security history.
+
+  Column        Type           Rules
+  ------------- -------------- -----------------------
+  id            UUID           PK
+  user_id       UUID           FK users, nullable
+  session_id    UUID           FK sessions, nullable
+  event_type    VARCHAR(100)   NOT NULL
+  severity      VARCHAR(30)    NOT NULL
+  source        VARCHAR(100)   NOT NULL
+  ip_address    VARCHAR(64)    nullable
+  user_agent    TEXT           nullable
+  success       BOOLEAN        NOT NULL
+  reason_code   VARCHAR(100)   nullable
+  metadata      JSON           nullable
+  occurred_at   DATETIME       NOT NULL
+  created_at    DATETIME       NOT NULL
+
+No normal UPDATE/DELETE.
+
+## 5.10 audit_logs
+
+Append-only application audit.
+
+  Column          Type           Rules
+  --------------- -------------- -----------------------
+  id              UUID           PK
+  actor_user_id   UUID           FK users, nullable
+  session_id      UUID           FK sessions, nullable
+  request_id      VARCHAR(100)   nullable
+  action          VARCHAR(100)   NOT NULL
+  entity_type     VARCHAR(100)   NOT NULL
+  entity_id       VARCHAR(100)   nullable
+  result          VARCHAR(30)    NOT NULL
+  source          VARCHAR(100)   NOT NULL
+  ip_address      VARCHAR(64)    nullable
+  before_data     JSON           nullable
+  after_data      JSON           nullable
+  metadata        JSON           nullable
+  occurred_at     DATETIME       NOT NULL
+  created_at      DATETIME       NOT NULL
+
+Audit records are append-only.
+
+------------------------------------------------------------------------
+
+# 6. Broker & Platform
+
+## 6.1 brokers
+
+A broker/exchange/provider is not the same thing as a trading platform.
+
+  Column         Type           Rules
+  -------------- -------------- ----------
+  id             UUID           PK
+  code           VARCHAR(50)    UNIQUE
+  name           VARCHAR(150)   NOT NULL
+  legal_name     VARCHAR(200)   nullable
+  broker_type    VARCHAR(50)    NOT NULL
+  country_code   VARCHAR(10)    nullable
+  website        VARCHAR(500)   nullable
+  status         VARCHAR(30)    NOT NULL
+  description    TEXT           nullable
+  created_at     DATETIME       NOT NULL
+  updated_at     DATETIME       NOT NULL
+  deleted_at     DATETIME       nullable
+
+Do not store `platform` as an ENUM in this table.
+
+## 6.2 platforms
+
+Examples: MT4, MT5, TradingView, REST API, FIX, exchange API.
+
+  Column       Type           Rules
+  ------------ -------------- ----------
+  id           UUID           PK
+  code         VARCHAR(50)    UNIQUE
+  name         VARCHAR(100)   NOT NULL
+  category     VARCHAR(50)    NOT NULL
+  version      VARCHAR(50)    nullable
+  status       VARCHAR(30)    NOT NULL
+  created_at   DATETIME       NOT NULL
+  updated_at   DATETIME       NOT NULL
+
+## 6.3 broker_platforms
+
+Maps broker capability to platform.
+
+  Column                Type           Rules
+  --------------------- -------------- --------------
+  id                    UUID           PK
+  broker_id             UUID           FK brokers
+  platform_id           UUID           FK platforms
+  server_name           VARCHAR(150)   nullable
+  api_supported         BOOLEAN        NOT NULL
+  websocket_supported   BOOLEAN        NOT NULL
+  plugin_required       BOOLEAN        NOT NULL
+  api_version           VARCHAR(50)    nullable
+  status                VARCHAR(30)    NOT NULL
+  created_at            DATETIME       NOT NULL
+  updated_at            DATETIME       NOT NULL
+
+UNIQUE(`broker_id`, `platform_id`, `server_name`).
+
+## 6.4 connections
+
+Stores connection metadata only. Secret material lives in a
+secret-management mechanism.
+
+  Column               Type           Rules
+  -------------------- -------------- ---------------------
+  id                   UUID           PK
+  user_id              UUID           FK users, nullable
+  broker_platform_id   UUID           FK broker_platforms
+  connection_name      VARCHAR(150)   NOT NULL
+  connection_type      VARCHAR(50)    NOT NULL
+  secret_ref           VARCHAR(500)   nullable
+  endpoint             VARCHAR(500)   nullable
+  status               VARCHAR(30)    NOT NULL
+  last_connected_at    DATETIME       nullable
+  last_error_at        DATETIME       nullable
+  last_error_code      VARCHAR(100)   nullable
+  created_at           DATETIME       NOT NULL
+  updated_at           DATETIME       NOT NULL
+  deleted_at           DATETIME       nullable
+
+------------------------------------------------------------------------
+
+# 7. Instrument & Market Data
+
+## 7.1 instrument_types
+
+Examples: FOREX, CRYPTO, STOCK, FUTURES, CFD, INDEX, COMMODITY.
+
+  Column        Type           Rules
+  ------------- -------------- ----------
+  id            UUID           PK
+  code          VARCHAR(50)    UNIQUE
+  name          VARCHAR(100)   NOT NULL
+  description   TEXT           nullable
+  status        VARCHAR(30)    NOT NULL
+  created_at    DATETIME       NOT NULL
+  updated_at    DATETIME       NOT NULL
+
+## 7.2 instruments
+
+Canonical instrument independent of broker symbol naming.
+
+  Column               Type           Rules
+  -------------------- -------------- ---------------------
+  id                   UUID           PK
+  instrument_type_id   UUID           FK instrument_types
+  canonical_code       VARCHAR(100)   UNIQUE
+  name                 VARCHAR(150)   NOT NULL
+  base_currency        VARCHAR(20)    nullable
+  quote_currency       VARCHAR(20)    nullable
+  status               VARCHAR(30)    NOT NULL
+  created_at           DATETIME       NOT NULL
+  updated_at           DATETIME       NOT NULL
+  deleted_at           DATETIME       nullable
+
+## 7.3 broker_symbols
+
+Broker-specific representation and trading rules.
+
+  Column               Type             Rules
+  -------------------- ---------------- ---------------------
+  id                   UUID             PK
+  broker_platform_id   UUID             FK broker_platforms
+  instrument_id        UUID             FK instruments
+  symbol_code          VARCHAR(100)     NOT NULL
+  symbol_name          VARCHAR(150)     nullable
+  digits               INTEGER          NOT NULL
+  tick_size            DECIMAL(24,12)   NOT NULL
+  price_step           DECIMAL(24,12)   nullable
+  contract_size        DECIMAL(24,8)    nullable
+  minimum_quantity     DECIMAL(24,12)   NOT NULL
+  maximum_quantity     DECIMAL(24,12)   nullable
+  quantity_step        DECIMAL(24,12)   NOT NULL
+  currency             VARCHAR(20)      nullable
+  trading_session      JSON             nullable
+  status               VARCHAR(30)      NOT NULL
+  last_synced_at       DATETIME         nullable
+  created_at           DATETIME         NOT NULL
+  updated_at           DATETIME         NOT NULL
+  deleted_at           DATETIME         nullable
+
+UNIQUE(`broker_platform_id`, `symbol_code`).
+
+## 7.4 symbol_mappings
+
+Maps external representations to canonical instruments.
+
+  Column              Type           Rules
+  ------------------- -------------- --------------------
+  id                  UUID           PK
+  instrument_id       UUID           FK instruments
+  source_type         VARCHAR(50)    NOT NULL
+  source_identifier   VARCHAR(150)   nullable
+  source_symbol       VARCHAR(150)   NOT NULL
+  mapping_type        VARCHAR(30)    NOT NULL
+  confidence_score    DECIMAL(5,2)   nullable
+  status              VARCHAR(30)    NOT NULL
+  verified_by         UUID           FK users, nullable
+  verified_at         DATETIME       nullable
+  created_at          DATETIME       NOT NULL
+  updated_at          DATETIME       NOT NULL
+
+## 7.5 market_data_sources
+
+  Column          Type           Rules
+  --------------- -------------- ----------
+  id              UUID           PK
+  code            VARCHAR(80)    UNIQUE
+  name            VARCHAR(150)   NOT NULL
+  source_type     VARCHAR(50)    NOT NULL
+  provider_name   VARCHAR(150)   nullable
+  status          VARCHAR(30)    NOT NULL
+  created_at      DATETIME       NOT NULL
+  updated_at      DATETIME       NOT NULL
+
+## 7.6 market_data_datasets
+
+Metadata and immutable identity for a historical dataset.
+
+  Column            Type            Rules
+  ----------------- --------------- ------------------------
+  id                UUID            PK
+  source_id         UUID            FK market_data_sources
+  instrument_id     UUID            FK instruments
+  dataset_version   VARCHAR(50)     NOT NULL
+  timeframe         VARCHAR(20)     nullable for tick
+  dataset_name      VARCHAR(200)    NOT NULL
+  start_time        DATETIME        NOT NULL
+  end_time          DATETIME        NOT NULL
+  timezone          VARCHAR(64)     NOT NULL
+  data_format       VARCHAR(50)     NOT NULL
+  storage_uri       VARCHAR(1000)   NOT NULL
+  row_count         BIGINT          nullable
+  checksum          VARCHAR(128)    nullable
+  status            VARCHAR(30)     NOT NULL
+  created_at        DATETIME        NOT NULL
+  updated_at        DATETIME        NOT NULL
+
+Published datasets must be immutable. A corrected dataset receives a new
+version.
+
+## 7.7 market_data_bars
+
+Logical candle schema. Physical storage may be a
+time-series/object/columnar system.
+
+  Column          Type             Rules
+  --------------- ---------------- -------------------------
+  id              BIGINT           PK or time-sortable ID
+  dataset_id      UUID             FK market_data_datasets
+  instrument_id   UUID             FK instruments
+  timeframe       VARCHAR(20)      NOT NULL
+  open_time       DATETIME         NOT NULL
+  close_time      DATETIME         nullable
+  open_price      DECIMAL(24,12)   NOT NULL
+  high_price      DECIMAL(24,12)   NOT NULL
+  low_price       DECIMAL(24,12)   NOT NULL
+  close_price     DECIMAL(24,12)   NOT NULL
+  volume          DECIMAL(24,12)   nullable
+  tick_volume     BIGINT           nullable
+  spread          DECIMAL(24,12)   nullable
+  created_at      DATETIME         NOT NULL
+
+UNIQUE(`dataset_id`, `open_time`).
+
+## 7.8 market_data_ticks
+
+Logical tick schema. High-volume physical storage should not be assumed
+to be the transactional database.
+
+  Column            Type             Rules
+  ----------------- ---------------- -------------------------
+  id                BIGINT           PK/time-sortable
+  dataset_id        UUID             FK market_data_datasets
+  instrument_id     UUID             FK instruments
+  event_time        DATETIME         NOT NULL
+  bid               DECIMAL(24,12)   nullable
+  ask               DECIMAL(24,12)   nullable
+  last_price        DECIMAL(24,12)   nullable
+  bid_volume        DECIMAL(24,12)   nullable
+  ask_volume        DECIMAL(24,12)   nullable
+  last_volume       DECIMAL(24,12)   nullable
+  source_sequence   BIGINT           nullable
+  created_at        DATETIME         NOT NULL
+
+------------------------------------------------------------------------
+
+# 8. Trading Accounts
+
+## 8.1 trading_accounts
+
+  Column                Type            Rules
+  --------------------- --------------- ---------------------
+  id                    UUID            PK
+  user_id               UUID            FK users
+  connection_id         UUID            FK connections
+  broker_id             UUID            FK brokers
+  broker_platform_id    UUID            FK broker_platforms
+  account_external_id   VARCHAR(150)    NOT NULL
+  account_name          VARCHAR(150)    nullable
+  account_type          VARCHAR(30)     NOT NULL
+  account_mode          VARCHAR(30)     nullable
+  currency              VARCHAR(20)     NOT NULL
+  leverage              DECIMAL(12,4)   nullable
+  status                VARCHAR(30)     NOT NULL
+  is_default            BOOLEAN         NOT NULL
+  created_at            DATETIME        NOT NULL
+  updated_at            DATETIME        NOT NULL
+  deleted_at            DATETIME        nullable
+
+UNIQUE(`broker_platform_id`, `account_external_id`).
+
+Do not use `balance`, `equity`, and margin as the authoritative current
+state without timestamped synchronization. Current account state may be
+cached; history belongs in snapshots/events.
+
+## 8.2 account_balance_snapshots
+
+  Column          Type            Rules
+  --------------- --------------- ---------------------
+  id              UUID            PK
+  account_id      UUID            FK trading_accounts
+  snapshot_time   DATETIME        NOT NULL
+  balance         DECIMAL(24,8)   NOT NULL
+  equity          DECIMAL(24,8)   NOT NULL
+  margin          DECIMAL(24,8)   nullable
+  free_margin     DECIMAL(24,8)   nullable
+  margin_level    DECIMAL(24,8)   nullable
+  currency        VARCHAR(20)     NOT NULL
+  source          VARCHAR(50)     NOT NULL
+  created_at      DATETIME        NOT NULL
+
+Index(`account_id`, `snapshot_time`).
+
+------------------------------------------------------------------------
+
+# 9. Trading Lifecycle
+
+Canonical lifecycle:
+
+`trading_request -> order -> order_execution -> deal -> position`
+
+Do not force every order to map directly to one position. One order can
+have multiple executions, and position construction depends on
+platform/account mode.
+
+## 9.1 trading_requests
+
+Represents an intent/request before broker order submission.
+
+  Column                Type             Rules
+  --------------------- ---------------- --------------------------------
+  id                    UUID             PK
+  account_id            UUID             FK trading_accounts
+  strategy_version_id   UUID             FK strategy_versions, nullable
+  instrument_id         UUID             FK instruments
+  broker_symbol_id      UUID             FK broker_symbols
+  request_type          VARCHAR(50)      NOT NULL
+  side                  VARCHAR(20)      NOT NULL
+  quantity              DECIMAL(24,12)   NOT NULL
+  requested_price       DECIMAL(24,12)   nullable
+  stop_loss             DECIMAL(24,12)   nullable
+  take_profit           DECIMAL(24,12)   nullable
+  time_in_force         VARCHAR(30)      nullable
+  source_type           VARCHAR(50)      NOT NULL
+  source_id             VARCHAR(100)     nullable
+  risk_check_status     VARCHAR(30)      NOT NULL
+  status                VARCHAR(30)      NOT NULL
+  idempotency_key       VARCHAR(150)     UNIQUE
+  correlation_id        VARCHAR(100)     nullable
+  created_at            DATETIME         NOT NULL
+  updated_at            DATETIME         NOT NULL
+
+## 9.2 orders
+
+  Column                Type             Rules
+  --------------------- ---------------- --------------------------------
+  id                    UUID             PK
+  trading_request_id    UUID             FK trading_requests, nullable
+  account_id            UUID             FK trading_accounts
+  strategy_version_id   UUID             FK strategy_versions, nullable
+  instrument_id         UUID             FK instruments
+  broker_symbol_id      UUID             FK broker_symbols
+  broker_order_id       VARCHAR(150)     nullable
+  side                  VARCHAR(20)      NOT NULL
+  order_type            VARCHAR(30)      NOT NULL
+  quantity              DECIMAL(24,12)   NOT NULL
+  requested_price       DECIMAL(24,12)   nullable
+  stop_loss             DECIMAL(24,12)   nullable
+  take_profit           DECIMAL(24,12)   nullable
+  time_in_force         VARCHAR(30)      nullable
+  status                VARCHAR(30)      NOT NULL
+  submitted_at          DATETIME         nullable
+  accepted_at           DATETIME         nullable
+  cancelled_at          DATETIME         nullable
+  correlation_id        VARCHAR(100)     nullable
+  created_at            DATETIME         NOT NULL
+  updated_at            DATETIME         NOT NULL
+
+No direct mandatory `position_id`.
+
+## 9.3 order_events
+
+Append-only state transition/event history.
+
+  Column            Type           Rules
+  ----------------- -------------- -----------
+  id                UUID           PK
+  order_id          UUID           FK orders
+  event_type        VARCHAR(50)    NOT NULL
+  event_time        DATETIME       NOT NULL
+  broker_event_id   VARCHAR(150)   nullable
+  status_from       VARCHAR(30)    nullable
+  status_to         VARCHAR(30)    nullable
+  payload           JSON           nullable
+  created_at        DATETIME       NOT NULL
+
+## 9.4 order_executions
+
+An order can be partially filled multiple times.
+
+  Column                Type             Rules
+  --------------------- ---------------- -----------
+  id                    UUID             PK
+  order_id              UUID             FK orders
+  broker_execution_id   VARCHAR(150)     nullable
+  execution_time        DATETIME         NOT NULL
+  quantity              DECIMAL(24,12)   NOT NULL
+  price                 DECIMAL(24,12)   NOT NULL
+  fee                   DECIMAL(24,12)   nullable
+  fee_currency          VARCHAR(20)      nullable
+  liquidity_type        VARCHAR(30)      nullable
+  created_at            DATETIME         NOT NULL
+
+## 9.5 deals
+
+Canonical executed transaction/fill record.
+
+  Column             Type             Rules
+  ------------------ ---------------- ------------------------
+  id                 UUID             PK
+  account_id         UUID             FK trading_accounts
+  order_id           UUID             FK orders, nullable
+  execution_id       UUID             FK order_executions
+  position_id        UUID             FK positions, nullable
+  instrument_id      UUID             FK instruments
+  broker_symbol_id   UUID             FK broker_symbols
+  broker_deal_id     VARCHAR(150)     nullable
+  deal_type          VARCHAR(30)      NOT NULL
+  side               VARCHAR(20)      NOT NULL
+  quantity           DECIMAL(24,12)   NOT NULL
+  price              DECIMAL(24,12)   NOT NULL
+  fee                DECIMAL(24,12)   nullable
+  swap               DECIMAL(24,12)   nullable
+  realized_pnl       DECIMAL(24,12)   nullable
+  currency           VARCHAR(20)      nullable
+  executed_at        DATETIME         NOT NULL
+  created_at         DATETIME         NOT NULL
+
+Deals are append-only.
+
+## 9.6 positions
+
+Represents the aggregate position state under the account/platform
+model.
+
+  Column                 Type             Rules
+  ---------------------- ---------------- --------------------------------
+  id                     UUID             PK
+  account_id             UUID             FK trading_accounts
+  instrument_id          UUID             FK instruments
+  broker_symbol_id       UUID             FK broker_symbols
+  strategy_version_id    UUID             FK strategy_versions, nullable
+  external_position_id   VARCHAR(150)     nullable
+  side                   VARCHAR(20)      NOT NULL
+  quantity               DECIMAL(24,12)   NOT NULL
+  average_entry_price    DECIMAL(24,12)   NOT NULL
+  current_price          DECIMAL(24,12)   nullable
+  stop_loss              DECIMAL(24,12)   nullable
+  take_profit            DECIMAL(24,12)   nullable
+  realized_pnl           DECIMAL(24,12)   nullable
+  unrealized_pnl         DECIMAL(24,12)   nullable
+  swap                   DECIMAL(24,12)   nullable
+  commission             DECIMAL(24,12)   nullable
+  status                 VARCHAR(30)      NOT NULL
+  opened_at              DATETIME         NOT NULL
+  closed_at              DATETIME         nullable
+  created_at             DATETIME         NOT NULL
+  updated_at             DATETIME         NOT NULL
+
+Uniqueness of external position ID must be scoped to account/platform,
+not globally.
+
+## 9.7 position_events
+
+Append-only position lifecycle.
+
+  Column           Type             Rules
+  ---------------- ---------------- --------------
+  id               UUID             PK
+  position_id      UUID             FK positions
+  event_type       VARCHAR(50)      NOT NULL
+  event_time       DATETIME         NOT NULL
+  quantity_delta   DECIMAL(24,12)   nullable
+  price            DECIMAL(24,12)   nullable
+  pnl_delta        DECIMAL(24,12)   nullable
+  payload          JSON             nullable
+  created_at       DATETIME         NOT NULL
+
+## 9.8 trading_journals
+
+Human/system explanation and trading notes.
+
+  Column                Type           Rules
+  --------------------- -------------- --------------------------------
+  id                    UUID           PK
+  user_id               UUID           FK users
+  account_id            UUID           FK trading_accounts, nullable
+  strategy_version_id   UUID           FK strategy_versions, nullable
+  position_id           UUID           FK positions, nullable
+  journal_type          VARCHAR(50)    NOT NULL
+  title                 VARCHAR(200)   nullable
+  content               TEXT           NOT NULL
+  metadata              JSON           nullable
+  created_at            DATETIME       NOT NULL
+  updated_at            DATETIME       NOT NULL
+
+------------------------------------------------------------------------
+
+# 10. Strategy & Risk
+
+## 10.1 strategies
+
+Stable identity; mutable metadata only.
+
+  Column          Type           Rules
+  --------------- -------------- ----------
+  id              UUID           PK
+  owner_user_id   UUID           FK users
+  strategy_code   VARCHAR(80)    UNIQUE
+  strategy_name   VARCHAR(150)   NOT NULL
+  description     TEXT           nullable
+  category        VARCHAR(100)   nullable
+  strategy_type   VARCHAR(50)    NOT NULL
+  status          VARCHAR(30)    NOT NULL
+  created_at      DATETIME       NOT NULL
+  updated_at      DATETIME       NOT NULL
+  deleted_at      DATETIME       nullable
+
+Do not put executable strategy version/configuration directly into this
+identity table.
+
+## 10.2 strategy_versions
+
+Immutable executable definition.
+
+  Column            Type           Rules
+  ----------------- -------------- ---------------
+  id                UUID           PK
+  strategy_id       UUID           FK strategies
+  version           VARCHAR(50)    NOT NULL
+  release_status    VARCHAR(30)    NOT NULL
+  logic_type        VARCHAR(50)    NOT NULL
+  logic_reference   VARCHAR(500)   nullable
+  configuration     JSON           nullable
+  checksum          VARCHAR(128)   nullable
+  created_by        UUID           FK users
+  created_at        DATETIME       NOT NULL
+  published_at      DATETIME       nullable
+  deprecated_at     DATETIME       nullable
+
+UNIQUE(`strategy_id`, `version`).
+
+Published version is immutable.
+
+## 10.3 strategy_parameters
+
+  Column                Type             Rules
+  --------------------- ---------------- ----------------------
+  id                    UUID             PK
+  strategy_version_id   UUID             FK strategy_versions
+  parameter_code        VARCHAR(100)     NOT NULL
+  value_type            VARCHAR(30)      NOT NULL
+  value                 TEXT             NOT NULL
+  min_value             DECIMAL(24,12)   nullable
+  max_value             DECIMAL(24,12)   nullable
+  step_value            DECIMAL(24,12)   nullable
+  is_optimizable        BOOLEAN          NOT NULL
+  created_at            DATETIME         NOT NULL
+  updated_at            DATETIME         NOT NULL
+
+UNIQUE(`strategy_version_id`, `parameter_code`).
+
+## 10.4 strategy_deployments
+
+Connects a strategy version to a live/backtest/copy-trading target.
+
+  Column                Type          Rules
+  --------------------- ------------- -------------------------------
+  id                    UUID          PK
+  strategy_version_id   UUID          FK strategy_versions
+  account_id            UUID          FK trading_accounts, nullable
+  deployment_type       VARCHAR(30)   NOT NULL
+  configuration         JSON          nullable
+  status                VARCHAR(30)   NOT NULL
+  started_at            DATETIME      nullable
+  stopped_at            DATETIME      nullable
+  created_at            DATETIME      NOT NULL
+  updated_at            DATETIME      NOT NULL
+
+## 10.5 risk_policies
+
+  Column          Type           Rules
+  --------------- -------------- ----------
+  id              UUID           PK
+  owner_user_id   UUID           FK users
+  policy_code     VARCHAR(80)    UNIQUE
+  name            VARCHAR(150)   NOT NULL
+  description     TEXT           nullable
+  scope_type      VARCHAR(30)    NOT NULL
+  scope_id        UUID           nullable
+  status          VARCHAR(30)    NOT NULL
+  created_at      DATETIME       NOT NULL
+  updated_at      DATETIME       NOT NULL
+
+## 10.6 risk_rules
+
+Atomic rules under a policy.
+
+  Column           Type           Rules
+  ---------------- -------------- ------------------
+  id               UUID           PK
+  risk_policy_id   UUID           FK risk_policies
+  rule_code        VARCHAR(100)   NOT NULL
+  rule_type        VARCHAR(50)    NOT NULL
+  configuration    JSON           NOT NULL
+  priority         INTEGER        NOT NULL
+  enabled          BOOLEAN        NOT NULL
+  created_at       DATETIME       NOT NULL
+  updated_at       DATETIME       NOT NULL
+
+UNIQUE(`risk_policy_id`, `rule_code`).
+
+## 10.7 risk_events
+
+Append-only risk decisions/violations.
+
+  Column               Type           Rules
+  -------------------- -------------- -------------------------------
+  id                   UUID           PK
+  risk_policy_id       UUID           FK risk_policies, nullable
+  risk_rule_id         UUID           FK risk_rules, nullable
+  trading_request_id   UUID           FK trading_requests, nullable
+  account_id           UUID           FK trading_accounts
+  event_type           VARCHAR(50)    NOT NULL
+  decision             VARCHAR(30)    NOT NULL
+  reason_code          VARCHAR(100)   nullable
+  details              JSON           nullable
+  occurred_at          DATETIME       NOT NULL
+  created_at           DATETIME       NOT NULL
+
+------------------------------------------------------------------------
+
+# 11. Backtest
+
+## 11.1 backtests
+
+Logical experiment definition.
+
+  Column        Type           Rules
+  ------------- -------------- ---------------
+  id            UUID           PK
+  user_id       UUID           FK users
+  strategy_id   UUID           FK strategies
+  name          VARCHAR(200)   NOT NULL
+  description   TEXT           nullable
+  created_at    DATETIME       NOT NULL
+  updated_at    DATETIME       NOT NULL
+
+## 11.2 backtest_runs
+
+Reproducible execution.
+
+  Column                Type           Rules
+  --------------------- -------------- ----------------------------
+  id                    UUID           PK
+  backtest_id           UUID           FK backtests
+  strategy_version_id   UUID           FK strategy_versions
+  dataset_id            UUID           FK market_data_datasets
+  risk_policy_id        UUID           FK risk_policies, nullable
+  configuration         JSON           nullable
+  engine_version        VARCHAR(80)    NOT NULL
+  run_checksum          VARCHAR(128)   nullable
+  status                VARCHAR(30)    NOT NULL
+  started_at            DATETIME       nullable
+  finished_at           DATETIME       nullable
+  created_at            DATETIME       NOT NULL
+
+## 11.3 backtest_trades
+
+Synthetic/historical trade result, separate from live `deals`.
+
+  Column            Type             Rules
+  ----------------- ---------------- ------------------
+  id                UUID             PK
+  backtest_run_id   UUID             FK backtest_runs
+  sequence_no       BIGINT           NOT NULL
+  instrument_id     UUID             FK instruments
+  side              VARCHAR(20)      NOT NULL
+  quantity          DECIMAL(24,12)   NOT NULL
+  entry_time        DATETIME         NOT NULL
+  entry_price       DECIMAL(24,12)   NOT NULL
+  exit_time         DATETIME         nullable
+  exit_price        DECIMAL(24,12)   nullable
+  pnl               DECIMAL(24,12)   nullable
+  fees              DECIMAL(24,12)   nullable
+  metadata          JSON             nullable
+  created_at        DATETIME         NOT NULL
+
+UNIQUE(`backtest_run_id`, `sequence_no`).
+
+## 11.4 backtest_metrics
+
+  Column            Type             Rules
+  ----------------- ---------------- ------------------
+  id                UUID             PK
+  backtest_run_id   UUID             FK backtest_runs
+  metric_code       VARCHAR(100)     NOT NULL
+  metric_value      DECIMAL(30,12)   NOT NULL
+  metric_unit       VARCHAR(30)      nullable
+  created_at        DATETIME         NOT NULL
+
+UNIQUE(`backtest_run_id`, `metric_code`).
+
+Metrics may include Profit Factor, Win Rate, Drawdown, Sharpe, Recovery
+Factor, Expectancy, etc.
+
+------------------------------------------------------------------------
+
+# 12. AI
+
+## 12.1 ai_providers
+
+  Column          Type           Rules
+  --------------- -------------- ----------
+  id              UUID           PK
+  code            VARCHAR(80)    UNIQUE
+  name            VARCHAR(150)   NOT NULL
+  provider_type   VARCHAR(50)    NOT NULL
+  status          VARCHAR(30)    NOT NULL
+  created_at      DATETIME       NOT NULL
+  updated_at      DATETIME       NOT NULL
+
+## 12.2 ai_models
+
+  Column          Type           Rules
+  --------------- -------------- -----------------
+  id              UUID           PK
+  provider_id     UUID           FK ai_providers
+  model_code      VARCHAR(150)   NOT NULL
+  display_name    VARCHAR(150)   nullable
+  capabilities    JSON           nullable
+  context_limit   BIGINT         nullable
+  status          VARCHAR(30)    NOT NULL
+  created_at      DATETIME       NOT NULL
+  updated_at      DATETIME       NOT NULL
+
+UNIQUE(`provider_id`, `model_code`).
+
+## 12.3 ai_provider_models
+
+Use only if OHTATS needs routing/configuration separate from model
+master.
+
+  Column          Type          Rules
+  --------------- ------------- -----------------
+  id              UUID          PK
+  provider_id     UUID          FK ai_providers
+  model_id        UUID          FK ai_models
+  configuration   JSON          nullable
+  priority        INTEGER       NOT NULL
+  status          VARCHAR(30)   NOT NULL
+  created_at      DATETIME      NOT NULL
+  updated_at      DATETIME      NOT NULL
+
+## 12.4 ai_sessions
+
+  Column         Type          Rules
+  -------------- ------------- -------------------------------
+  id             UUID          PK
+  user_id        UUID          FK users
+  session_type   VARCHAR(50)   NOT NULL
+  strategy_id    UUID          FK strategies, nullable
+  account_id     UUID          FK trading_accounts, nullable
+  status         VARCHAR(30)   NOT NULL
+  created_at     DATETIME      NOT NULL
+  updated_at     DATETIME      NOT NULL
+
+## 12.5 ai_messages
+
+  Column          Type          Rules
+  --------------- ------------- ----------------
+  id              UUID          PK
+  ai_session_id   UUID          FK ai_sessions
+  role            VARCHAR(30)   NOT NULL
+  content         TEXT          NOT NULL
+  sequence_no     BIGINT        NOT NULL
+  metadata        JSON          nullable
+  created_at      DATETIME      NOT NULL
+
+UNIQUE(`ai_session_id`, `sequence_no`).
+
+## 12.6 ai_requests
+
+  Column              Type          Rules
+  ------------------- ------------- ------------------------------
+  id                  UUID          PK
+  ai_session_id       UUID          FK ai_sessions
+  provider_model_id   UUID          FK ai_provider_models
+  prompt_version_id   UUID          FK prompt_versions, nullable
+  request_type        VARCHAR(50)   NOT NULL
+  input_payload       JSON          nullable
+  status              VARCHAR(30)   NOT NULL
+  requested_at        DATETIME      NOT NULL
+  completed_at        DATETIME      nullable
+
+## 12.7 ai_responses
+
+  Column                 Type           Rules
+  ---------------------- -------------- ----------------
+  id                     UUID           PK
+  ai_request_id          UUID           FK ai_requests
+  provider_response_id   VARCHAR(200)   nullable
+  output_text            TEXT           nullable
+  structured_output      JSON           nullable
+  finish_reason          VARCHAR(100)   nullable
+  latency_ms             BIGINT         nullable
+  created_at             DATETIME       NOT NULL
+
+## 12.8 ai_analyses
+
+Stores structured analysis produced by AI.
+
+  Column             Type           Rules
+  ------------------ -------------- --------------------------
+  id                 UUID           PK
+  ai_request_id      UUID           FK ai_requests
+  instrument_id      UUID           FK instruments, nullable
+  analysis_type      VARCHAR(50)    NOT NULL
+  timeframe          VARCHAR(20)    nullable
+  analysis_payload   JSON           NOT NULL
+  confidence_score   DECIMAL(5,2)   nullable
+  created_at         DATETIME       NOT NULL
+
+## 12.9 ai_decisions
+
+AI decisions are not automatically executable orders.
+
+  Column                Type           Rules
+  --------------------- -------------- --------------------------------
+  id                    UUID           PK
+  ai_request_id         UUID           FK ai_requests
+  strategy_version_id   UUID           FK strategy_versions, nullable
+  instrument_id         UUID           FK instruments, nullable
+  decision_type         VARCHAR(50)    NOT NULL
+  decision              VARCHAR(50)    NOT NULL
+  rationale             TEXT           nullable
+  confidence_score      DECIMAL(5,2)   nullable
+  proposed_action       JSON           nullable
+  execution_status      VARCHAR(30)    NOT NULL
+  created_at            DATETIME       NOT NULL
+
+Execution still requires the normal risk/trading pipeline.
+
+## 12.10 prompt_templates
+
+  Column        Type           Rules
+  ------------- -------------- ----------
+  id            UUID           PK
+  code          VARCHAR(100)   UNIQUE
+  name          VARCHAR(150)   NOT NULL
+  description   TEXT           nullable
+  status        VARCHAR(30)    NOT NULL
+  created_at    DATETIME       NOT NULL
+  updated_at    DATETIME       NOT NULL
+
+## 12.11 prompt_versions
+
+  Column               Type           Rules
+  -------------------- -------------- ---------------------
+  id                   UUID           PK
+  prompt_template_id   UUID           FK prompt_templates
+  version              VARCHAR(50)    NOT NULL
+  content              TEXT           NOT NULL
+  checksum             VARCHAR(128)   nullable
+  status               VARCHAR(30)    NOT NULL
+  created_by           UUID           FK users
+  created_at           DATETIME       NOT NULL
+
+UNIQUE(`prompt_template_id`, `version`).
+
+## 12.12 ai_usage_records
+
+  Column           Type             Rules
+  ---------------- ---------------- -----------------
+  id               UUID             PK
+  ai_request_id    UUID             FK ai_requests
+  provider_id      UUID             FK ai_providers
+  model_id         UUID             FK ai_models
+  input_tokens     BIGINT           nullable
+  output_tokens    BIGINT           nullable
+  total_tokens     BIGINT           nullable
+  estimated_cost   DECIMAL(24,12)   nullable
+  currency         VARCHAR(20)      nullable
+  recorded_at      DATETIME         NOT NULL
+
+------------------------------------------------------------------------
+
+# 13. Workflow
+
+## 13.1 workflows
+
+  Column          Type           Rules
+  --------------- -------------- ----------
+  id              UUID           PK
+  owner_user_id   UUID           FK users
+  workflow_code   VARCHAR(80)    UNIQUE
+  name            VARCHAR(150)   NOT NULL
+  description     TEXT           nullable
+  status          VARCHAR(30)    NOT NULL
+  created_at      DATETIME       NOT NULL
+  updated_at      DATETIME       NOT NULL
+  deleted_at      DATETIME       nullable
+
+## 13.2 workflow_versions
+
+  Column        Type           Rules
+  ------------- -------------- --------------
+  id            UUID           PK
+  workflow_id   UUID           FK workflows
+  version       VARCHAR(50)    NOT NULL
+  definition    JSON           NOT NULL
+  checksum      VARCHAR(128)   nullable
+  status        VARCHAR(30)    NOT NULL
+  created_by    UUID           FK users
+  created_at    DATETIME       NOT NULL
+
+UNIQUE(`workflow_id`, `version`).
+
+## 13.3 workflow_steps
+
+  Column                Type           Rules
+  --------------------- -------------- ----------------------
+  id                    UUID           PK
+  workflow_version_id   UUID           FK workflow_versions
+  step_code             VARCHAR(100)   NOT NULL
+  step_type             VARCHAR(50)    NOT NULL
+  sequence_no           INTEGER        NOT NULL
+  configuration         JSON           nullable
+  created_at            DATETIME       NOT NULL
+
+UNIQUE(`workflow_version_id`, `step_code`).
+
+## 13.4 workflow_executions
+
+  Column                Type           Rules
+  --------------------- -------------- ----------------------
+  id                    UUID           PK
+  workflow_version_id   UUID           FK workflow_versions
+  triggered_by          UUID           FK users, nullable
+  trigger_type          VARCHAR(50)    NOT NULL
+  correlation_id        VARCHAR(100)   nullable
+  status                VARCHAR(30)    NOT NULL
+  started_at            DATETIME       nullable
+  finished_at           DATETIME       nullable
+  created_at            DATETIME       NOT NULL
+
+## 13.5 workflow_execution_steps
+
+  Column                  Type           Rules
+  ----------------------- -------------- ------------------------
+  id                      UUID           PK
+  workflow_execution_id   UUID           FK workflow_executions
+  workflow_step_id        UUID           FK workflow_steps
+  status                  VARCHAR(30)    NOT NULL
+  input_payload           JSON           nullable
+  output_payload          JSON           nullable
+  error_code              VARCHAR(100)   nullable
+  started_at              DATETIME       nullable
+  finished_at             DATETIME       nullable
+  created_at              DATETIME       NOT NULL
+
+------------------------------------------------------------------------
+
+# 14. Copy Trading
+
+Copy trading must never bypass risk and broker execution controls.
+
+## 14.1 copy_trade_groups
+
+  Column          Type           Rules
+  --------------- -------------- ----------
+  id              UUID           PK
+  owner_user_id   UUID           FK users
+  name            VARCHAR(150)   NOT NULL
+  status          VARCHAR(30)    NOT NULL
+  created_at      DATETIME       NOT NULL
+  updated_at      DATETIME       NOT NULL
+
+## 14.2 copy_trade_masters
+
+  Column                Type          Rules
+  --------------------- ------------- --------------------------------
+  id                    UUID          PK
+  group_id              UUID          FK copy_trade_groups
+  account_id            UUID          FK trading_accounts
+  strategy_version_id   UUID          FK strategy_versions, nullable
+  status                VARCHAR(30)   NOT NULL
+  created_at            DATETIME      NOT NULL
+
+## 14.3 copy_trade_followers
+
+  Column       Type          Rules
+  ------------ ------------- ----------------------
+  id           UUID          PK
+  group_id     UUID          FK copy_trade_groups
+  account_id   UUID          FK trading_accounts
+  status       VARCHAR(30)   NOT NULL
+  created_at   DATETIME      NOT NULL
+
+## 14.4 copy_trade_rules
+
+  Column          Type          Rules
+  --------------- ------------- -------------------------
+  id              UUID          PK
+  follower_id     UUID          FK copy_trade_followers
+  rule_type       VARCHAR(50)   NOT NULL
+  configuration   JSON          NOT NULL
+  enabled         BOOLEAN       NOT NULL
+  created_at      DATETIME      NOT NULL
+  updated_at      DATETIME      NOT NULL
+
+## 14.5 copy_trade_mappings
+
+Maps source/master instruments to follower broker symbols.
+
+  Column                    Type          Rules
+  ------------------------- ------------- -------------------------
+  id                        UUID          PK
+  master_id                 UUID          FK copy_trade_masters
+  follower_id               UUID          FK copy_trade_followers
+  source_instrument_id      UUID          FK instruments
+  target_broker_symbol_id   UUID          FK broker_symbols
+  status                    VARCHAR(30)   NOT NULL
+  created_at                DATETIME      NOT NULL
+
+## 14.6 copy_trade_executions
+
+  Column                      Type           Rules
+  --------------------------- -------------- -------------------------------
+  id                          UUID           PK
+  master_id                   UUID           FK copy_trade_masters
+  follower_id                 UUID           FK copy_trade_followers
+  source_deal_id              UUID           FK deals
+  target_trading_request_id   UUID           FK trading_requests, nullable
+  target_order_id             UUID           FK orders, nullable
+  status                      VARCHAR(30)    NOT NULL
+  requested_at                DATETIME       NOT NULL
+  completed_at                DATETIME       nullable
+  error_code                  VARCHAR(100)   nullable
+
+------------------------------------------------------------------------
+
+# 15. Plugin
+
+## 15.1 plugins
+
+  Column          Type           Rules
+  --------------- -------------- --------------------
+  id              UUID           PK
+  owner_user_id   UUID           FK users, nullable
+  plugin_code     VARCHAR(100)   UNIQUE
+  name            VARCHAR(150)   NOT NULL
+  plugin_type     VARCHAR(50)    NOT NULL
+  status          VARCHAR(30)    NOT NULL
+  created_at      DATETIME       NOT NULL
+  updated_at      DATETIME       NOT NULL
+
+## 15.2 plugin_versions
+
+  Column        Type            Rules
+  ------------- --------------- ------------
+  id            UUID            PK
+  plugin_id     UUID            FK plugins
+  version       VARCHAR(50)     NOT NULL
+  package_uri   VARCHAR(1000)   NOT NULL
+  checksum      VARCHAR(128)    NOT NULL
+  manifest      JSON            NOT NULL
+  status        VARCHAR(30)     NOT NULL
+  created_at    DATETIME        NOT NULL
+
+UNIQUE(`plugin_id`, `version`).
+
+## 15.3 plugin_dependencies
+
+  Column               Type           Rules
+  -------------------- -------------- --------------------
+  id                   UUID           PK
+  plugin_version_id    UUID           FK plugin_versions
+  dependency_type      VARCHAR(50)    NOT NULL
+  dependency_code      VARCHAR(150)   NOT NULL
+  version_constraint   VARCHAR(100)   nullable
+  created_at           DATETIME       NOT NULL
+
+## 15.4 plugin_installations
+
+  Column               Type          Rules
+  -------------------- ------------- --------------------
+  id                   UUID          PK
+  plugin_version_id    UUID          FK plugin_versions
+  user_id              UUID          FK users
+  installation_scope   VARCHAR(50)   NOT NULL
+  status               VARCHAR(30)   NOT NULL
+  installed_at         DATETIME      nullable
+  uninstalled_at       DATETIME      nullable
+  created_at           DATETIME      NOT NULL
+
+------------------------------------------------------------------------
+
+# 16. Licensing & Subscription
+
+## 16.1 subscription_plans
+
+  Column        Type           Rules
+  ------------- -------------- ----------
+  id            UUID           PK
+  code          VARCHAR(80)    UNIQUE
+  name          VARCHAR(150)   NOT NULL
+  description   TEXT           nullable
+  status        VARCHAR(30)    NOT NULL
+  created_at    DATETIME       NOT NULL
+  updated_at    DATETIME       NOT NULL
+
+## 16.2 subscription_plan_versions
+
+  Column          Type            Rules
+  --------------- --------------- -----------------------
+  id              UUID            PK
+  plan_id         UUID            FK subscription_plans
+  version         VARCHAR(50)     NOT NULL
+  duration_days   INTEGER         NOT NULL
+  price           DECIMAL(24,8)   NOT NULL
+  currency        VARCHAR(20)     NOT NULL
+  features        JSON            nullable
+  status          VARCHAR(30)     NOT NULL
+  created_at      DATETIME        NOT NULL
+
+## 16.3 subscriptions
+
+  Column            Type          Rules
+  ----------------- ------------- -------------------------------
+  id                UUID          PK
+  user_id           UUID          FK users
+  plan_version_id   UUID          FK subscription_plan_versions
+  status            VARCHAR(30)   NOT NULL
+  starts_at         DATETIME      NOT NULL
+  ends_at           DATETIME      nullable
+  auto_renew        BOOLEAN       NOT NULL
+  created_at        DATETIME      NOT NULL
+  updated_at        DATETIME      NOT NULL
+
+## 16.4 licenses
+
+  Column             Type           Rules
+  ------------------ -------------- ----------------------------
+  id                 UUID           PK
+  user_id            UUID           FK users
+  subscription_id    UUID           FK subscriptions, nullable
+  license_key_hash   VARCHAR(255)   UNIQUE
+  status             VARCHAR(30)    NOT NULL
+  issued_at          DATETIME       NOT NULL
+  expires_at         DATETIME       nullable
+  revoked_at         DATETIME       nullable
+  created_at         DATETIME       NOT NULL
+
+Store hash, not plaintext license secret.
+
+## 16.5 license_entitlements
+
+  Column             Type            Rules
+  ------------------ --------------- -------------
+  id                 UUID            PK
+  license_id         UUID            FK licenses
+  entitlement_code   VARCHAR(150)    NOT NULL
+  limit_value        DECIMAL(24,8)   nullable
+  configuration      JSON            nullable
+  created_at         DATETIME        NOT NULL
+
+UNIQUE(`license_id`, `entitlement_code`).
+
+------------------------------------------------------------------------
+
+# 17. Notification & External Integration
+
+## 17.1 notifications
+
+  Column              Type           Rules
+  ------------------- -------------- ----------
+  id                  UUID           PK
+  user_id             UUID           FK users
+  notification_type   VARCHAR(50)    NOT NULL
+  title               VARCHAR(200)   NOT NULL
+  message             TEXT           NOT NULL
+  severity            VARCHAR(30)    NOT NULL
+  source_type         VARCHAR(50)    nullable
+  source_id           VARCHAR(100)   nullable
+  read_at             DATETIME       nullable
+  created_at          DATETIME       NOT NULL
+
+## 17.2 notification_deliveries
+
+  Column                Type           Rules
+  --------------------- -------------- ------------------
+  id                    UUID           PK
+  notification_id       UUID           FK notifications
+  channel               VARCHAR(30)    NOT NULL
+  destination           VARCHAR(500)   NOT NULL
+  status                VARCHAR(30)    NOT NULL
+  provider_message_id   VARCHAR(200)   nullable
+  sent_at               DATETIME       nullable
+  delivered_at          DATETIME       nullable
+  failed_at             DATETIME       nullable
+  error_code            VARCHAR(100)   nullable
+  created_at            DATETIME       NOT NULL
+
+## 17.3 external_integrations
+
+  Column             Type           Rules
+  ------------------ -------------- --------------------
+  id                 UUID           PK
+  user_id            UUID           FK users, nullable
+  integration_type   VARCHAR(50)    NOT NULL
+  provider_code      VARCHAR(100)   NOT NULL
+  name               VARCHAR(150)   NOT NULL
+  configuration      JSON           nullable
+  status             VARCHAR(30)    NOT NULL
+  created_at         DATETIME       NOT NULL
+  updated_at         DATETIME       NOT NULL
+
+## 17.4 integration_credentials
+
+Only references to secret storage.
+
+  Column            Type           Rules
+  ----------------- -------------- --------------------------
+  id                UUID           PK
+  integration_id    UUID           FK external_integrations
+  secret_ref        VARCHAR(500)   NOT NULL
+  credential_type   VARCHAR(50)    NOT NULL
+  status            VARCHAR(30)    NOT NULL
+  expires_at        DATETIME       nullable
+  created_at        DATETIME       NOT NULL
+  revoked_at        DATETIME       nullable
+
+------------------------------------------------------------------------
+
+# 18. Operations
+
+## 18.1 system_settings
+
+  Column          Type           Rules
+  --------------- -------------- --------------------
+  id              UUID           PK
+  setting_key     VARCHAR(200)   UNIQUE
+  setting_value   TEXT           NOT NULL
+  value_type      VARCHAR(30)    NOT NULL
+  scope           VARCHAR(50)    NOT NULL
+  description     TEXT           nullable
+  updated_by      UUID           FK users, nullable
+  created_at      DATETIME       NOT NULL
+  updated_at      DATETIME       NOT NULL
+
+Secrets must not be stored here.
+
+## 18.2 feature_flags
+
+  Column          Type           Rules
+  --------------- -------------- ----------
+  id              UUID           PK
+  flag_code       VARCHAR(150)   UNIQUE
+  enabled         BOOLEAN        NOT NULL
+  scope           VARCHAR(50)    NOT NULL
+  configuration   JSON           nullable
+  created_at      DATETIME       NOT NULL
+  updated_at      DATETIME       NOT NULL
+
+## 18.3 jobs
+
+  Column         Type           Rules
+  -------------- -------------- ----------
+  id             UUID           PK
+  job_type       VARCHAR(100)   NOT NULL
+  payload        JSON           nullable
+  priority       INTEGER        NOT NULL
+  status         VARCHAR(30)    NOT NULL
+  scheduled_at   DATETIME       nullable
+  available_at   DATETIME       nullable
+  attempts       INTEGER        NOT NULL
+  max_attempts   INTEGER        NOT NULL
+  created_at     DATETIME       NOT NULL
+  updated_at     DATETIME       NOT NULL
+
+## 18.4 job_executions
+
+  Column          Type           Rules
+  --------------- -------------- ----------
+  id              UUID           PK
+  job_id          UUID           FK jobs
+  worker_id       VARCHAR(150)   nullable
+  status          VARCHAR(30)    NOT NULL
+  started_at      DATETIME       nullable
+  finished_at     DATETIME       nullable
+  error_code      VARCHAR(100)   nullable
+  error_message   TEXT           nullable
+  created_at      DATETIME       NOT NULL
+
+## 18.5 api_usage_records
+
+  Column           Type            Rules
+  ---------------- --------------- -----------------------
+  id               UUID            PK
+  user_id          UUID            FK users, nullable
+  api_key_id       UUID            FK api_keys, nullable
+  provider_type    VARCHAR(50)     NOT NULL
+  operation        VARCHAR(150)    NOT NULL
+  request_count    BIGINT          NOT NULL
+  response_count   BIGINT          NOT NULL
+  usage_units      DECIMAL(24,8)   nullable
+  recorded_at      DATETIME        NOT NULL
+
+## 18.6 backup_records
+
+  Column            Type            Rules
+  ----------------- --------------- ----------
+  id                UUID            PK
+  backup_type       VARCHAR(50)     NOT NULL
+  storage_uri       VARCHAR(1000)   NOT NULL
+  checksum          VARCHAR(128)    nullable
+  size_bytes        BIGINT          nullable
+  status            VARCHAR(30)     NOT NULL
+  started_at        DATETIME        nullable
+  completed_at      DATETIME        nullable
+  retention_until   DATETIME        nullable
+  created_at        DATETIME        NOT NULL
+
+## 18.7 system_events
+
+Append-only platform event history.
+
+  Column           Type           Rules
+  ---------------- -------------- ----------
+  id               UUID           PK
+  event_type       VARCHAR(100)   NOT NULL
+  source           VARCHAR(100)   NOT NULL
+  severity         VARCHAR(30)    NOT NULL
+  correlation_id   VARCHAR(100)   nullable
+  payload          JSON           nullable
+  occurred_at      DATETIME       NOT NULL
+  created_at       DATETIME       NOT NULL
+
+------------------------------------------------------------------------
+
+# 19. Core Relationships
+
+``` text
+users
+ ├── user_profiles
+ ├── user_roles ── roles ── role_permissions ── permissions
+ ├── sessions
+ ├── api_keys
+ ├── connections
+ ├── trading_accounts
+ ├── strategies
+ ├── ai_sessions
+ ├── backtests
+ ├── workflows
+ ├── subscriptions ── subscription_plan_versions ── subscription_plans
+ ├── licenses ── license_entitlements
+ └── notifications
+
+brokers
+ └── broker_platforms ── platforms
+        ├── connections
+        └── broker_symbols ── instruments
+
+instrument_types
+ └── instruments
+      ├── broker_symbols
+      ├── symbol_mappings
+      └── market_data_datasets
+
+market_data_datasets
+ ├── market_data_bars
+ └── market_data_ticks
+
+strategies
+ └── strategy_versions
+      ├── strategy_parameters
+      └── strategy_deployments
+
+strategy_versions
+ ├── trading_requests
+ ├── orders
+ ├── positions
+ ├── backtest_runs
+ ├── risk/deployment references
+ └── AI decision references
+
+trading_requests
+ └── orders
+      ├── order_events
+      └── order_executions
+             └── deals
+                   └── positions
+                        └── position_events
+
+backtests
+ └── backtest_runs
+      ├── strategy_versions
+      ├── market_data_datasets
+      ├── backtest_trades
+      └── backtest_metrics
+
+ai_providers
+ └── ai_models
+      └── ai_provider_models
+           └── ai_requests
+                ├── ai_responses
+                ├── ai_analyses
+                ├── ai_decisions
+                └── ai_usage_records
 ```
-User (1) -------- (N) Trading Account
-User (1) -------- (N) Strategy
-User (1) -------- (N) AI Session
-User (1) -------- (N) Backtest
-User (1) -------- (N) Notification
-User (1) -------- (N) API Key
-User (1) -------- (N) License
-User (1) -------- (N) Audit Log
+
+------------------------------------------------------------------------
+
+# 20. Trading State Rules
+
+1.  `trading_requests` represents intent.
+2.  `orders` represents broker order instruction.
+3.  `order_events` represents order lifecycle.
+4.  `order_executions` represents fills.
+5.  `deals` represents executed transaction records.
+6.  `positions` represents current/closed aggregate position state.
+7.  `position_events` represents position lifecycle.
+8.  An order may have zero, one, or many executions.
+9.  A deal must reference an execution.
+10. A position may be created/changed/closed by multiple deals.
+11. Do not assume one order equals one position.
+12. Netting and hedging account modes must be supported by
+    connector/position logic, not by a universal one-order-one-position
+    FK.
+
+------------------------------------------------------------------------
+
+# 21. Strategy Rules
+
+1.  `strategies` is identity.
+2.  `strategy_versions` is executable immutable version.
+3.  `strategy_parameters` belongs to a strategy version.
+4.  Published versions cannot be modified in place.
+5.  New logic/configuration creates a new version.
+6.  Live trading references a specific strategy version.
+7.  Backtest references a specific strategy version.
+8.  AI decisions may reference a strategy version.
+9.  Copy trading may reference a strategy version.
+10. Strategy deployment is the association between a version and a
+    runtime target.
+
+------------------------------------------------------------------------
+
+# 22. Backtest Reproducibility
+
+A reproducible backtest requires:
+
+``` text
+strategy_version_id
++
+market_data_dataset_id
++
+risk_policy_id (if used)
++
+engine_version
++
+configuration
++
+run_checksum
 ```
 
----
+The database must never claim that two runs are identical merely because
+they use the same strategy identity.
 
-## 5.2 Trading Account
+------------------------------------------------------------------------
 
-Satu Trading Account:
+# 23. AI Safety Boundary
 
-- Dimiliki oleh satu User.
-- Terhubung ke satu Broker.
-- Memiliki banyak Order.
-- Memiliki banyak Position.
-- Memiliki banyak Deal.
+AI output is advisory/decision data until it enters the controlled
+trading pipeline.
 
-Relasi:
+Canonical path:
 
-```
-Trading Account (N) -------- (1) Broker
-Trading Account (N) -------- (1) User
-Trading Account (1) -------- (N) Orders
-Trading Account (1) -------- (N) Positions
-Trading Account (1) -------- (N) Deals
-```
-
----
-
-## 5.3 Broker
-
-Satu Broker dapat digunakan oleh banyak Trading Account.
-
-Relasi:
-
-```
-Broker (1) -------- (N) Trading Account
+``` text
+AI Request
+   ↓
+AI Analysis / AI Decision
+   ↓
+Trading Request
+   ↓
+Risk Policy / Risk Rules
+   ↓
+Order
+   ↓
+Execution
 ```
 
----
+AI must not bypass:
 
-## 5.4 Strategy
+-   authorization;
+-   account state validation;
+-   risk management;
+-   broker/platform validation;
+-   idempotency;
+-   audit logging.
 
-Satu Strategy dapat digunakan oleh:
+------------------------------------------------------------------------
 
-- Banyak Order
-- Banyak Position
-- Banyak Deal
-- Banyak Backtest
+# 24. Copy Trading Safety Boundary
 
-Relasi:
+Canonical path:
 
-```
-Strategy (1) -------- (N) Orders
-Strategy (1) -------- (N) Positions
-Strategy (1) -------- (N) Deals
-Strategy (1) -------- (N) Backtest
-```
-
----
-
-## 5.5 Trading Symbol
-
-Satu Trading Symbol dapat digunakan oleh:
-
-- Banyak Order
-- Banyak Position
-- Banyak Deal
-
-Relasi:
-
-```
-Trading Symbol (1) -------- (N) Orders
-Trading Symbol (1) -------- (N) Positions
-Trading Symbol (1) -------- (N) Deals
+``` text
+Master Deal
+   ↓
+Copy Mapping
+   ↓
+Follower Rule
+   ↓
+Target Trading Request
+   ↓
+Risk Check
+   ↓
+Target Order
 ```
 
----
+Copy trading must not directly insert target `deals`.
 
-## 5.6 Orders
+------------------------------------------------------------------------
 
-Setiap Order:
+# 25. Audit & Immutability Policy
 
-- Berasal dari satu Trading Account.
-- Menggunakan satu Strategy.
-- Mengacu pada satu Trading Symbol.
-- Dapat menghasilkan satu Position.
+Append-only:
 
-Relasi:
+-   `security_events`
+-   `audit_logs`
+-   `order_events`
+-   `order_executions`
+-   `deals`
+-   `position_events`
+-   `risk_events`
+-   `system_events`
+-   `backtest_runs` after completion
+-   published market-data dataset versions
+-   published strategy versions
+-   published workflow versions
+-   published prompt versions
 
+Mutable/configuration:
+
+-   users
+-   profiles
+-   connections
+-   brokers
+-   platforms
+-   strategies
+-   workflows
+-   subscription metadata
+-   system settings
+
+Revocable rather than deleted:
+
+-   sessions
+-   API keys
+-   licenses
+-   credentials
+-   integrations
+
+------------------------------------------------------------------------
+
+# 26. Foreign Key Rules
+
+Every FK must satisfy:
+
+1.  referenced table exists;
+2.  referenced column exists;
+3.  referenced column has PK/UNIQUE semantics where required;
+4.  datatype is compatible;
+5.  delete behavior is explicitly chosen;
+6.  historical tables must not cascade-delete financial history;
+7.  user deletion must not silently erase audit/transaction history;
+8.  external IDs are not used as relational FK unless explicitly
+    designed as stable unique keys.
+
+Recommended default:
+
+-   configuration child -\> `RESTRICT` or controlled soft delete;
+-   historical child -\> `RESTRICT`;
+-   pure junction -\> `CASCADE` only when deleting the relationship is
+    safe;
+-   audit/history -\> never cascade from user/business deletion.
+
+------------------------------------------------------------------------
+
+# 27. Index Rules
+
+Every table:
+
+-   PK index.
+
+Every FK frequently queried:
+
+-   index FK.
+
+Common composite indexes:
+
+-   `trading_accounts(user_id, status)`
+-   `broker_symbols(broker_platform_id, symbol_code)`
+-   `orders(account_id, created_at)`
+-   `order_events(order_id, event_time)`
+-   `order_executions(order_id, execution_time)`
+-   `deals(account_id, executed_at)`
+-   `positions(account_id, status)`
+-   `position_events(position_id, event_time)`
+-   `market_data_bars(dataset_id, open_time)`
+-   `ai_messages(ai_session_id, sequence_no)`
+-   `workflow_execution_steps(workflow_execution_id, workflow_step_id)`
+
+Avoid indexing every column automatically.
+
+------------------------------------------------------------------------
+
+# 28. Constraint Rules
+
+Prices, quantities, and monetary values:
+
+-   must not use FLOAT/DOUBLE as authoritative storage;
+-   quantity must be positive where semantically required;
+-   `minimum_quantity <= maximum_quantity` when maximum exists;
+-   `quantity_step > 0`;
+-   `tick_size > 0`;
+-   bar high \>= open and close;
+-   bar low \<= open and close;
+-   confidence scores are constrained to their valid range;
+-   percentage-like values must define their unit.
+
+Business validation that cannot be safely represented as a DB CHECK
+remains application/domain validation.
+
+------------------------------------------------------------------------
+
+# 29. Soft Delete Rules
+
+Soft delete is allowed for:
+
+-   users;
+-   user profiles;
+-   connections;
+-   brokers;
+-   instruments;
+-   broker symbols;
+-   strategies;
+-   workflows;
+-   plugins;
+-   subscription plan identities.
+
+Soft delete is not the normal lifecycle mechanism for:
+
+-   deals;
+-   executions;
+-   order events;
+-   position events;
+-   audit logs;
+-   security events;
+-   system events;
+-   completed backtest records.
+
+For credentials/sessions/licenses use explicit revocation/expiry fields.
+
+------------------------------------------------------------------------
+
+# 30. Data Retention
+
+Retention must be policy-driven.
+
+Suggested categories:
+
+### Critical financial history
+
+Long-term retention; never delete merely because the live object is
+closed.
+
+### Audit/security
+
+Long-term retention according to compliance/security policy.
+
+### Market data
+
+Tiered retention; hot/fast storage and archive/object storage may
+differ.
+
+### Runtime jobs
+
+Shorter retention after successful completion.
+
+### Notifications
+
+Retention according to product requirement.
+
+The database design does not hard-code a single universal retention
+period.
+
+------------------------------------------------------------------------
+
+# 31. Transaction Boundaries
+
+A transaction should be used for atomic state changes such as:
+
+``` text
+trading_request creation + initial state
+order creation + request state transition
+order execution + related order state update
+position state update + position event
+license issue + entitlement creation
 ```
-Trading Account (1) -------- (N) Orders
-Strategy (1) -------- (N) Orders
-Trading Symbol (1) -------- (N) Orders
-Orders (1) -------- (0..1) Positions
+
+Do not hold a database transaction open while waiting for an external
+broker, AI provider, or network request.
+
+External operations use state machines/idempotency/correlation IDs.
+
+------------------------------------------------------------------------
+
+# 32. Idempotency & Correlation
+
+External commands should use idempotency keys.
+
+Examples:
+
+-   trading request;
+-   broker order submission;
+-   notification delivery;
+-   workflow trigger;
+-   AI provider request where supported;
+-   copy trade execution.
+
+Use `correlation_id` to trace a business flow across:
+
+``` text
+AI
+→ workflow
+→ trading request
+→ order
+→ execution
+→ deal
+→ position
+→ audit
 ```
 
----
+------------------------------------------------------------------------
 
-## 5.7 Positions
+# 33. Secret Management
 
-Setiap Position:
+Never store plaintext:
 
-- Berasal dari satu Order (jika ada).
-- Dimiliki oleh satu Trading Account.
-- Menggunakan satu Strategy.
-- Menggunakan satu Trading Symbol.
-- Dapat menghasilkan satu atau lebih Deal.
+-   broker passwords;
+-   trading account passwords;
+-   API secrets;
+-   private keys;
+-   OAuth client secrets;
+-   AI provider keys;
+-   webhook secrets.
 
-Relasi:
+Database stores only:
 
-```
-Orders (1) -------- (0..1) Positions
-Trading Account (1) -------- (N) Positions
-Strategy (1) -------- (N) Positions
-Trading Symbol (1) -------- (N) Positions
-Positions (1) -------- (N) Deals
-```
-
----
-
-## 5.8 Deals
-
-Setiap Deal:
-
-- Berasal dari satu Position.
-- Dimiliki oleh satu Trading Account.
-- Menggunakan satu Trading Symbol.
-
-Relasi:
-
-```
-Positions (1) -------- (N) Deals
-Trading Account (1) -------- (N) Deals
-Trading Symbol (1) -------- (N) Deals
+``` text
+secret_ref
+credential metadata
+status
+expiry/revocation metadata
 ```
 
----
+Actual secret storage is an infrastructure concern.
 
-## 5.9 AI Session
+------------------------------------------------------------------------
 
-Satu AI Session dimiliki oleh satu User.
+# 34. API / MCP
 
-Relasi:
+REST API and MCP are interfaces, not automatically separate business
+tables.
 
-```
-User (1) -------- (N) AI Session
-```
+Use:
 
----
+-   `users`;
+-   `roles`;
+-   `permissions`;
+-   `sessions`;
+-   `api_keys`;
+-   `audit_logs`;
+-   `api_usage_records`.
 
-## 5.10 Backtest
+Create additional persistence only when the interface introduces a real
+business entity.
 
-Satu Backtest menggunakan satu Strategy.
+------------------------------------------------------------------------
 
-Relasi:
+# 35. Cache / Queue / WebSocket
 
-```
-Strategy (1) -------- (N) Backtest
-```
+Do not create permanent tables merely for:
 
----
+-   current websocket connections;
+-   cache entries;
+-   transient market prices;
+-   message queue internals;
+-   worker heartbeats.
 
-## 5.11 Plugin
+Persistent operational state belongs in the relevant entity tables;
+ephemeral runtime state belongs to the infrastructure component designed
+for it.
 
-Plugin dapat memiliki banyak Plugin Version.
+------------------------------------------------------------------------
 
-Setiap Plugin Version dapat dipasang pada banyak instalasi.
+# 36. ERD --- High Level
 
-Relasi:
+``` text
+USERS
+ ├── USER_PROFILES
+ ├── USER_ROLES ── ROLES ── ROLE_PERMISSIONS ── PERMISSIONS
+ ├── SESSIONS
+ ├── API_KEYS
+ ├── STRATEGIES ── STRATEGY_VERSIONS ── STRATEGY_PARAMETERS
+ │                         └── STRATEGY_DEPLOYMENTS
+ ├── CONNECTIONS ── BROKER_PLATFORMS ── BROKERS
+ │                                  └── PLATFORMS
+ ├── TRADING_ACCOUNTS
+ │      ├── ACCOUNT_BALANCE_SNAPSHOTS
+ │      ├── TRADING_REQUESTS
+ │      │      └── ORDERS
+ │      │           ├── ORDER_EVENTS
+ │      │           └── ORDER_EXECUTIONS ── DEALS ── POSITIONS
+ │      │                                      └── POSITION_EVENTS
+ │      └── TRADING_JOURNALS
+ ├── AI_SESSIONS ── AI_REQUESTS ── AI_RESPONSES
+ │                              ├── AI_ANALYSES
+ │                              ├── AI_DECISIONS
+ │                              └── AI_USAGE_RECORDS
+ ├── BACKTESTS ── BACKTEST_RUNS ── BACKTEST_TRADES
+ │                              └── BACKTEST_METRICS
+ ├── WORKFLOWS ── WORKFLOW_VERSIONS ── WORKFLOW_STEPS
+ │                                  └── WORKFLOW_EXECUTIONS
+ ├── COPY_TRADE_GROUPS
+ ├── SUBSCRIPTIONS ── SUBSCRIPTION_PLAN_VERSIONS ── SUBSCRIPTION_PLANS
+ ├── LICENSES ── LICENSE_ENTITLEMENTS
+ └── NOTIFICATIONS ── NOTIFICATION_DELIVERIES
 
-```
-Plugin (1) -------- (N) Plugin Version
-
-Plugin Version (1) -------- (N) Plugin Installation
-```
-
----
-
-## 5.12 Workflow
-
-Workflow dapat memiliki banyak Workflow Version.
-
-Setiap Workflow Version dapat dijalankan berkali-kali melalui Workflow Execution.
-
-Relasi:
-
-```
-Workflow (1) -------- (N) Workflow Version
-
-Workflow Version (1) -------- (N) Workflow Execution
-```
-
----
-
-## 5.13 License
-
-Satu Subscription Plan dapat dimiliki oleh banyak License.
-
-Relasi:
-
-```
-Subscription Plan (1) -------- (N) License
-```
-
----
-
-## 5.14 Notification
-
-Notification dikirim kepada satu User.
-
-Relasi:
-
-```
-User (1) -------- (N) Notification
-```
-
----
-
-## 5.15 Audit Log
-
-Audit Log mencatat seluruh aktivitas yang dilakukan oleh User maupun sistem.
-
-Relasi:
-
-```
-User (1) -------- (N) Audit Log
+INSTRUMENT_TYPES
+ └── INSTRUMENTS
+      ├── BROKER_SYMBOLS
+      ├── SYMBOL_MAPPINGS
+      └── MARKET_DATA_DATASETS
+            ├── MARKET_DATA_BARS
+            └── MARKET_DATA_TICKS
 ```
 
-## 6.2 Tabel Brokers
+------------------------------------------------------------------------
 
-### Tujuan
+# 37. Final Table Catalog
 
-Menyimpan informasi seluruh broker, exchange, maupun platform trading yang didukung oleh OHTATS.
+  ------------------------------------------------------------------------------------------------
+                     \# Table                        Category         Lifecycle
+  --------------------- ---------------------------- ---------------- ----------------------------
+                      1 users                        Identity         Mutable/soft-delete
 
-Tabel ini menjadi fondasi integrasi **Multi Platform**, sehingga sistem dapat terhubung dengan berbagai penyedia layanan trading tanpa bergantung pada satu vendor tertentu.
+                      2 user_profiles                Identity         Mutable
 
-Broker yang dapat didukung antara lain:
+                      3 roles                        Security         Mutable
 
-- MetaTrader 4
-- MetaTrader 5
-- TradingView
-- Binance
-- Bybit
-- OKX
-- Interactive Brokers
-- Broker Forex lainnya
-- Crypto Exchange
-- Platform tambahan melalui Plugin
+                      4 permissions                  Security         Controlled
 
----
+                      5 user_roles                   Security         Relationship
 
-### Struktur Tabel
+                      6 role_permissions             Security         Relationship
 
-| Kolom | Tipe | Keterangan |
-|--------|------|------------|
-| id | UUID | Primary Key |
-| broker_code | VARCHAR(30) | Kode unik broker |
-| broker_name | VARCHAR(100) | Nama broker |
-| broker_type | ENUM(FOREX, CRYPTO, STOCK, FUTURES, CFD) | Jenis broker |
-| platform | ENUM(MT4, MT5, TRADINGVIEW, API) | Platform trading |
-| country | VARCHAR(100) | Negara asal broker |
-| server_name | VARCHAR(150) | Nama server broker |
-| website | VARCHAR(255) | Website resmi broker |
-| broker_logo | VARCHAR(255) | Lokasi file logo broker |
-| api_supported | BOOLEAN | Mendukung API |
-| api_version | VARCHAR(50) | Versi API |
-| websocket_supported | BOOLEAN | Mendukung WebSocket |
-| plugin_required | BOOLEAN | Membutuhkan Plugin Integration |
-| status | ENUM(ACTIVE, INACTIVE) | Status broker |
-| notes | TEXT | Catatan tambahan |
-| description | TEXT | Deskripsi broker |
-| created_at | DATETIME | Waktu dibuat |
-| updated_at | DATETIME | Waktu diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
----
+                      7 sessions                     Security         Revocable/expiring
 
-### Constraint
-
-- Primary Key menggunakan UUID.
-- broker_code harus unik.
-- broker_name tidak boleh kosong.
-- Kombinasi broker_name dan server_name harus unik.
-- website bersifat opsional.
-- Soft Delete menggunakan kolom `deleted_at`.
-
----
+                      8 api_keys                     Security         Revocable/expiring
 
-### Relasi
-
-- Satu Broker dapat memiliki banyak Trading Account.
-- Satu Broker dapat digunakan oleh banyak Strategy.
-- Satu Broker dapat mendukung banyak Trading Symbol.
-- Digunakan oleh modul Multi Platform.
-
----
+                      9 security_events              Security         Append-only
 
-### Index
+                     10 audit_logs                   Security         Append-only
 
-- PK(id)
-- UNIQUE(broker_code)
-- UNIQUE(broker_name, server_name)
-- INDEX(platform)
-- INDEX(status)
+                     11 brokers                      Connectivity     Mutable/soft-delete
 
----
+                     12 platforms                    Connectivity     Controlled
 
-### Catatan
+                     13 broker_platforms             Connectivity     Mutable
 
-Tabel Brokers merupakan pusat integrasi seluruh platform trading yang didukung OHTATS.
+                     14 connections                  Connectivity     Revocable/soft-delete
 
-Seluruh koneksi menuju MT4, MT5, TradingView, Broker API, maupun platform tambahan melalui Plugin harus mengacu pada tabel ini.
+                     15 instrument_types             Market           Controlled
 
----
+                     16 instruments                  Market           Mutable/soft-delete
 
-### Future Development
+                     17 broker_symbols               Market           Mutable/soft-delete
 
-Pada versi berikutnya tabel ini dapat dikembangkan untuk mendukung:
+                     18 symbol_mappings              Market           Controlled
 
-- FIX API
-- REST API Configuration
-- WebSocket Configuration
-- Broker Health Monitoring
-- Auto Discovery Broker Server
-- Broker Performance Analytics
+                     19 market_data_sources          Market           Controlled
 
-## 6.3 Tabel Trading Accounts
+                     20 market_data_datasets         Market           Versioned/immutable
 
-### Tujuan
+                     21 market_data_bars             Market           Append/archive
 
-Menyimpan informasi seluruh akun trading yang dimiliki oleh pengguna.
+                     22 market_data_ticks            Market           Append/archive
 
-Trading Account menjadi penghubung utama antara User dengan Broker serta menjadi pusat seluruh aktivitas trading pada OHTATS.
+                     23 trading_accounts             Trading          Mutable/soft-delete
 
-Digunakan oleh:
+                     24 account_balance_snapshots    Trading          Append-only
 
-- Trading Engine
-- AI Engine
-- Workflow Engine
-- Backtest
-- Copy Trading
-- Risk Management
-- Dashboard
-- Multi Platform Integration
+                     25 trading_requests             Trading          Lifecycle
 
----
+                     26 orders                       Trading          Lifecycle
 
-### Struktur Tabel
+                     27 order_events                 Trading          Append-only
 
-| Kolom | Tipe | Keterangan |
-|--------|------|------------|
-| id | UUID | Primary Key |
-| user_id | UUID | Pemilik akun |
-| broker_id | UUID | Broker yang digunakan |
-| account_number | VARCHAR(100) | Nomor akun trading |
-| account_name | VARCHAR(100) | Nama akun |
-| account_type | ENUM(DEMO, REAL) | Jenis akun |
-| platform | ENUM(MT4, MT5, TRADINGVIEW, API) | Platform trading |
-| server | VARCHAR(150) | Nama server broker |
-| currency | VARCHAR(10) | Mata uang akun |
-| leverage | VARCHAR(20) | Leverage akun |
-| balance | DECIMAL(18,2) | Saldo terakhir |
-| equity | DECIMAL(18,2) | Equity |
-| margin | DECIMAL(18,2) | Margin digunakan |
-| free_margin | DECIMAL(18,2) | Margin bebas |
-| status | ENUM(ACTIVE, DISABLED) | Status akun |
-| is_default | BOOLEAN | Akun utama |
-| created_at | DATETIME | Waktu dibuat |
-| updated_at | DATETIME | Waktu diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
----
-
-### Constraint
-
-- Primary Key menggunakan UUID.
-- user_id wajib mengacu ke tabel Users.
-- broker_id wajib mengacu ke tabel Brokers.
-- account_number harus unik dalam satu Broker.
-- account_type hanya boleh DEMO atau REAL.
-- platform mengikuti platform yang didukung Broker.
-- Soft Delete menggunakan kolom `deleted_at`.
-
----
-
-### Relasi
-
-- Banyak Trading Account dimiliki oleh satu User.
-- Banyak Trading Account menggunakan satu Broker.
-- Satu Trading Account memiliki banyak Orders.
-- Satu Trading Account memiliki banyak Positions.
-- Satu Trading Account memiliki banyak Deals.
-
----
-
-### Index
-
-- PK(id)
-- INDEX(user_id)
-- INDEX(broker_id)
-- UNIQUE(broker_id, account_number)
-- INDEX(status)
-
----
-
-### Catatan
-
-Trading Account merupakan identitas akun trading yang dihubungkan ke MT4, MT5, TradingView, maupun Broker API.
-
-Seluruh aktivitas trading pada OHTATS selalu mengacu pada Trading Account.
-
----
-
-### Future Development
-
-- Multi Currency Account
-- Hedging Account
-- Netting Account
-- Portfolio Account
-- Account Synchronization
-- Auto Reconnect
-
-## 6.4 Tabel Strategy
-
-### Tujuan
-
-Menyimpan seluruh konfigurasi strategi trading yang digunakan oleh OHTATS.
+                     28 order_executions             Trading          Append-only
 
-Strategy menjadi pusat pengambilan keputusan bagi AI Engine, Trading Engine, Workflow, Backtest, Risk Management, dan Copy Trading.
+                     29 deals                        Trading          Append-only
 
----
+                     30 positions                    Trading          Lifecycle
 
-### Struktur Tabel
+                     31 position_events              Trading          Append-only
 
-| Kolom | Tipe | Keterangan |
-|--------|------|------------|
-| id | UUID | Primary Key |
-| strategy_code | VARCHAR(50) | Kode unik strategi |
-| strategy_name | VARCHAR(150) | Nama strategi |
-| description | TEXT | Deskripsi strategi |
-| category | VARCHAR(100) | Kategori strategi |
-| market_type | ENUM(FOREX, CRYPTO, STOCK, FUTURES, CFD) | Jenis pasar |
-| timeframe | VARCHAR(20) | Timeframe |
-| symbol_id | UUID | Referensi ke Trading Symbol |
-| broker_id | UUID | Broker yang direkomendasikan |
-| risk_level | ENUM(LOW, MEDIUM, HIGH) | Tingkat risiko |
-| max_open_trade | INTEGER | Maksimum posisi terbuka |
-| stop_loss | DECIMAL(18,2) | Default Stop Loss |
-| take_profit | DECIMAL(18,2) | Default Take Profit |
-| trailing_stop | BOOLEAN | Menggunakan trailing stop |
-| ai_enabled | BOOLEAN | Menggunakan AI |
-| backtest_ready | BOOLEAN | Siap untuk Backtest |
-| copy_trade_ready | BOOLEAN | Siap untuk Copy Trading |
-| status | ENUM(DRAFT, ACTIVE, ARCHIVED) | Status strategi |
-| version | VARCHAR(20) | Semantic Version |
-| created_by | UUID | Pembuat strategi |
-| created_at | DATETIME | Waktu dibuat |
-| updated_at | DATETIME | Waktu diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
----
-
-### Constraint
-
-- Primary Key menggunakan UUID.
-- strategy_code harus unik.
-- strategy_name tidak boleh kosong.
-- symbol_id wajib mengacu ke tabel Trading Symbols.
-- broker_id wajib mengacu ke tabel Brokers.
-- created_by wajib mengacu ke tabel Users.
-- risk_level hanya boleh LOW, MEDIUM, atau HIGH.
-- max_open_trade minimal bernilai 1.
-- stop_loss dan take_profit tidak boleh bernilai negatif.
-- status hanya boleh DRAFT, ACTIVE, atau ARCHIVED.
-- version mengikuti Semantic Versioning.
-- Soft Delete menggunakan kolom `deleted_at`.
-
----
-
-### Relasi
-
-- Satu User dapat memiliki banyak Strategy.
-- Satu Broker dapat digunakan oleh banyak Strategy.
-- Satu Trading Symbol dapat digunakan oleh banyak Strategy.
-- Satu Strategy dapat digunakan oleh banyak Orders.
-- Satu Strategy dapat digunakan oleh banyak Positions.
-- Satu Strategy dapat digunakan oleh banyak Deals.
-- Satu Strategy dapat digunakan oleh banyak Backtest.
-- Satu Strategy dapat digunakan oleh AI Engine.
-- Satu Strategy dapat digunakan oleh Copy Trading.
-
----
-
-### Index
-
-- PK(id)
-- UNIQUE(strategy_code)
-- INDEX(strategy_name)
-- INDEX(symbol_id)
-- INDEX(broker_id)
-- INDEX(status)
-
----
-
-### Catatan
-
-Strategy merupakan inti dari sistem OHTATS.
+                     32 trading_journals             Trading          Mutable
 
-Seluruh proses AI, Backtest, Trading Automation, Workflow Engine, Copy Trading, Risk Management, dan Analytics menggunakan Strategy sebagai pusat pengambilan keputusan.
+                     33 strategies                   Strategy         Mutable/soft-delete
 
-Desain Strategy dibuat fleksibel agar mampu mendukung berbagai metode trading saat ini maupun yang akan datang.
+                     34 strategy_versions            Strategy         Versioned/immutable
 
----
-
-### Future Development
+                     35 strategy_parameters          Strategy         Versioned
 
-- Strategy Marketplace
-- Strategy Rating
-- Strategy Version Control
-- AI Strategy Optimization
-- Strategy Performance Analytics
-- Auto Strategy Deployment
+                     36 strategy_deployments         Strategy         Lifecycle
 
-## 6.5 Tabel Trading Symbols
+                     37 risk_policies                Risk             Mutable
 
-### Tujuan
+                     38 risk_rules                   Risk             Mutable
 
-Menyimpan seluruh simbol atau instrumen trading yang didukung oleh OHTATS.
+                     39 risk_events                  Risk             Append-only
 
-Tabel ini menjadi referensi utama bagi seluruh aktivitas trading sehingga seluruh modul menggunakan data simbol yang konsisten dan terhindar dari duplikasi.
+                     40 backtests                    Backtest         Mutable
 
-Digunakan oleh:
+                     41 backtest_runs                Backtest         Immutable after completion
 
-- Trading Engine
-- AI Engine
-- Workflow Engine
-- Backtest
-- Copy Trading
-- Dashboard
-- Multi Platform Integration
+                     42 backtest_trades              Backtest         Append-only
 
----
+                     43 backtest_metrics             Backtest         Append-only
 
-### Struktur Tabel
+                     44 ai_providers                 AI               Controlled
 
-| Kolom | Tipe | Keterangan |
-|--------|------|------------|
-| id | UUID | Primary Key |
-| symbol_code | VARCHAR(30) | Kode unik simbol |
-| symbol_name | VARCHAR(100) | Nama simbol |
-| market_type | ENUM(FOREX, CRYPTO, STOCK, FUTURES, CFD, INDEX, COMMODITY) | Jenis pasar |
-| base_currency | VARCHAR(20) | Mata uang dasar |
-| quote_currency | VARCHAR(20) | Mata uang pembanding |
-| digits | INTEGER | Jumlah digit harga |
-| tick_size | DECIMAL(18,8) | Ukuran tick |
-| contract_size | DECIMAL(18,2) | Ukuran kontrak |
-| minimum_lot | DECIMAL(10,2) | Lot minimum |
-| maximum_lot | DECIMAL(10,2) | Lot maksimum |
-| lot_step | DECIMAL(10,2) | Kelipatan lot |
-| swap_supported | BOOLEAN | Mendukung swap |
-| trading_session | VARCHAR(100) | Jadwal perdagangan |
-| status | ENUM(ACTIVE, INACTIVE) | Status simbol |
-| created_at | DATETIME | Waktu dibuat |
-| updated_at | DATETIME | Waktu diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
----
-
-### Constraint
-
-- Primary Key menggunakan UUID.
-- symbol_code harus unik.
-- symbol_name tidak boleh kosong.
-- minimum_lot tidak boleh lebih besar dari maximum_lot.
-- lot_step harus lebih besar dari 0.
-- digits minimal bernilai 0.
-- Soft Delete menggunakan kolom `deleted_at`.
-
----
-
-### Relasi
-
-- Satu Trading Symbol dapat digunakan oleh banyak Strategy.
-- Satu Trading Symbol dapat digunakan oleh banyak Orders.
-- Satu Trading Symbol dapat digunakan oleh banyak Positions.
-- Satu Trading Symbol dapat digunakan oleh banyak Deals.
-- Satu Trading Symbol dapat digunakan oleh banyak Backtest.
-
----
-
-### Index
-
-- PK(id)
-- UNIQUE(symbol_code)
-- INDEX(symbol_name)
-- INDEX(market_type)
-- INDEX(status)
-
----
-
-### Catatan
-
-Seluruh modul trading di OHTATS wajib menggunakan referensi dari tabel Trading Symbols agar seluruh data instrumen tetap konsisten.
-
----
-
-### Future Development
-
-- Dynamic Symbol Synchronization
-- Market Session Calendar
-- Trading Hours Exception
-- Corporate Action Support
-- Symbol Category Management
-- Symbol Performance Analytics
+                     45 ai_models                    AI               Controlled
 
-## 6.6 Tabel Orders
+                     46 ai_provider_models           AI               Configuration
 
-### Tujuan
-
-Menyimpan seluruh instruksi trading yang dikirim ke broker.
+                     47 ai_sessions                  AI               Lifecycle
 
-Tabel Orders menjadi titik awal proses trading pada OHTATS dan berfungsi sebagai penghubung antara Trading Account, Strategy, Trading Symbol, Position, serta Broker.
+                     48 ai_messages                  AI               Append-only
 
-Digunakan oleh:
+                     49 ai_requests                  AI               Append-only/lifecycle
 
-- Trading Engine
-- AI Engine
-- Workflow Engine
-- Risk Management
-- Dashboard
-- Multi Platform Integration
-- Audit System
+                     50 ai_responses                 AI               Append-only
 
----
+                     51 ai_analyses                  AI               Append-only
 
-### Struktur Tabel
+                     52 ai_decisions                 AI               Append-only
 
-| Kolom | Tipe | Keterangan |
-|--------|------|------------|
-| id | UUID | Primary Key |
-| account_id | UUID | Relasi ke Trading Account |
-| position_id | UUID | Relasi ke Position (nullable) |
-| strategy_id | UUID | Relasi ke Strategy (nullable) |
-| symbol_id | UUID | Relasi ke Trading Symbols |
-| broker_order_id | VARCHAR(100) | ID Order dari Broker |
-| order_type | ENUM(MARKET, LIMIT, STOP, STOP_LIMIT) | Jenis Order |
-| side | ENUM(BUY, SELL) | Arah Order |
-| volume | DECIMAL(18,8) | Volume Order |
-| price | DECIMAL(18,8) | Harga Order |
-| stop_loss | DECIMAL(18,8) | Stop Loss |
-| take_profit | DECIMAL(18,8) | Take Profit |
-| status | ENUM(PENDING, PARTIALLY_FILLED, FILLED, CANCELLED, EXPIRED, REJECTED) | Status Order |
-| placed_at | DATETIME | Waktu Order dibuat |
-| executed_at | DATETIME | Waktu Order dieksekusi |
-| cancelled_at | DATETIME | Waktu Order dibatalkan |
-| expiration_at | DATETIME | Waktu kedaluwarsa |
-| created_at | DATETIME | Waktu dibuat |
-| updated_at | DATETIME | Waktu diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
----
-
-### Constraint
-
-- Primary Key menggunakan UUID.
-- account_id wajib mengacu ke tabel Trading Accounts.
-- position_id mengacu ke tabel Positions (opsional).
-- strategy_id mengacu ke tabel Strategy (opsional).
-- symbol_id wajib mengacu ke tabel Trading Symbols.
-- broker_order_id harus unik dalam satu Trading Account.
-- volume harus lebih besar dari 0.
-- status hanya boleh menggunakan nilai ENUM yang telah ditentukan.
-- Soft Delete menggunakan kolom `deleted_at`.
-
----
-
-### Relasi
-
-- Satu Trading Account memiliki banyak Order.
-- Banyak Order dapat membentuk satu Position.
-- Satu Strategy dapat digunakan oleh banyak Order.
-- Satu Trading Symbol dapat digunakan oleh banyak Order.
-- AI Analysis dapat menghasilkan rekomendasi Order.
-- Seluruh Order divalidasi oleh Risk Management.
-- Seluruh aktivitas Order dicatat pada Audit Log.
-
----
-
-### Index
-
-- PK(id)
-- INDEX(account_id)
-- INDEX(position_id)
-- INDEX(strategy_id)
-- INDEX(symbol_id)
-- UNIQUE(account_id, broker_order_id)
-- INDEX(status)
-- INDEX(created_at)
-
----
-
-### Catatan
-
-Order merupakan instruksi trading yang dikirim ke broker.
-
-Tidak semua Order akan menghasilkan Position.
-
-Order dapat dibuat secara manual, oleh Expert Advisor (EA), AI Engine, maupun Workflow Engine.
+                     53 prompt_templates             AI               Mutable
 
----
+                     54 prompt_versions              AI               Immutable after publish
 
-### Future Development
+                     55 ai_usage_records             AI               Append-only
 
-- Advanced Order Routing
-- Smart Order Management
-- Partial Fill Optimization
-- Multi Broker Order Synchronization
-- Order Replay
-- Order Performance Analytics
+                     56 workflows                    Workflow         Mutable/soft-delete
 
-## 6.7 Tabel Positions
+                     57 workflow_versions            Workflow         Immutable after publish
 
-### Tujuan
+                     58 workflow_steps               Workflow         Versioned
 
-Menyimpan seluruh posisi trading yang sedang berjalan maupun yang telah ditutup.
+                     59 workflow_executions          Workflow         Append/lifecycle
 
-Tabel Positions menjadi pusat monitoring posisi trading dan digunakan oleh AI Engine, Risk Management, Dashboard, Workflow Engine, serta Analytics.
+                     60 workflow_execution_steps     Workflow         Append/lifecycle
 
----
+                     61 copy_trade_groups            Copy Trading     Mutable
 
-### Struktur Tabel
+                     62 copy_trade_masters           Copy Trading     Lifecycle
 
-| Kolom | Tipe | Keterangan |
-|--------|------|------------|
-| id | UUID | Primary Key |
-| account_id | UUID | Relasi ke Trading Account |
-| strategy_id | UUID | Relasi ke Strategy (nullable) |
-| symbol_id | UUID | Relasi ke Trading Symbols |
-| broker_position_id | VARCHAR(100) | ID Position dari Broker |
-| position_type | ENUM(BUY, SELL) | Jenis Position |
-| volume | DECIMAL(18,8) | Volume Position |
-| open_price | DECIMAL(18,8) | Harga pembukaan |
-| current_price | DECIMAL(18,8) | Harga saat ini |
-| stop_loss | DECIMAL(18,8) | Stop Loss |
-| take_profit | DECIMAL(18,8) | Take Profit |
-| unrealized_profit | DECIMAL(18,2) | Floating Profit/Loss |
-| swap | DECIMAL(18,2) | Swap |
-| commission | DECIMAL(18,2) | Komisi |
-| status | ENUM(OPEN, PARTIALLY_CLOSED, CLOSED) | Status Position |
-| opened_at | DATETIME | Waktu pembukaan |
-| closed_at | DATETIME | Waktu penutupan |
-| created_at | DATETIME | Waktu dibuat |
-| updated_at | DATETIME | Waktu diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
----
-
-### Constraint
-
-- Primary Key menggunakan UUID.
-- account_id wajib mengacu ke tabel Trading Accounts.
-- strategy_id mengacu ke tabel Strategy (opsional).
-- symbol_id wajib mengacu ke tabel Trading Symbols.
-- broker_position_id harus unik dalam satu Trading Account.
-- volume harus lebih besar dari 0.
-- opened_at wajib diisi.
-- closed_at hanya boleh diisi jika status = CLOSED atau PARTIALLY_CLOSED.
-- Soft Delete menggunakan kolom `deleted_at`.
-
----
-
-### Relasi
-
-- Satu Trading Account memiliki banyak Position.
-- Satu Strategy dapat digunakan oleh banyak Position.
-- Satu Trading Symbol dapat digunakan oleh banyak Position.
-- Satu Position dapat terbentuk dari satu atau lebih Order.
-- Satu Position dapat memiliki banyak Deal.
-- Satu Position dapat memiliki banyak AI Analysis.
-- Satu Position mengikuti aturan Risk Management.
-- Satu Position memiliki satu Trading Journal.
-- Seluruh aktivitas Position dicatat pada Audit Log.
-
----
-
-### Index
-
-- PK(id)
-- INDEX(account_id)
-- INDEX(strategy_id)
-- INDEX(symbol_id)
-- UNIQUE(account_id, broker_position_id)
-- INDEX(status)
-- INDEX(opened_at)
+                     63 copy_trade_followers         Copy Trading     Lifecycle
 
----
+                     64 copy_trade_rules             Copy Trading     Mutable
 
-### Catatan
+                     65 copy_trade_mappings          Copy Trading     Controlled
 
-Position merepresentasikan posisi trading yang aktif maupun yang telah ditutup.
+                     66 copy_trade_executions        Copy Trading     Append/lifecycle
 
-Selama Position masih terbuka, nilai `current_price` dan `unrealized_profit` akan diperbarui secara berkala.
+                     67 plugins                      Plugin           Mutable
 
-Position dapat dibuka secara manual, oleh Expert Advisor (EA), AI Engine, maupun Workflow Engine.
+                     68 plugin_versions              Plugin           Immutable after publish
 
----
+                     69 plugin_dependencies          Plugin           Versioned
 
-### Future Development
+                     70 plugin_installations         Plugin           Lifecycle
 
-- Netting Position Support
-- Hedging Position Support
-- Position Snapshot
-- Position Synchronization
-- Multi Broker Position Aggregation
-- Position Performance Analytics
+                     71 subscription_plans           Licensing        Controlled
 
-## 6.8 Tabel Deals
+                     72 subscription_plan_versions   Licensing        Versioned
 
-### Tujuan
+                     73 subscriptions                Licensing        Lifecycle
 
-Menyimpan setiap hasil eksekusi trading yang telah dikonfirmasi oleh broker.
+                     74 licenses                     Licensing        Revocable
 
-Tabel Deals merupakan catatan permanen seluruh transaksi yang telah dieksekusi dan menjadi sumber utama perhitungan Realized Profit/Loss, Audit, Trading History, serta Performance Analytics.
+                     75 license_entitlements         Licensing        Controlled
 
----
+                     76 notifications                Notification     Mutable/read-state
 
-### Struktur Tabel
+                     77 notification_deliveries      Notification     Append/lifecycle
 
-| Kolom | Tipe | Keterangan |
-|--------|------|------------|
-| id | UUID | Primary Key |
-| order_id | UUID | Relasi ke Orders |
-| position_id | UUID | Relasi ke Positions |
-| account_id | UUID | Relasi ke Trading Account |
-| symbol_id | UUID | Relasi ke Trading Symbols |
-| broker_deal_id | VARCHAR(100) | ID Deal dari Broker |
-| side | ENUM(BUY, SELL) | Arah transaksi |
-| volume | DECIMAL(18,8) | Volume yang dieksekusi |
-| execution_price | DECIMAL(18,8) | Harga eksekusi |
-| realized_profit | DECIMAL(18,2) | Profit/Loss yang direalisasikan |
-| commission | DECIMAL(18,2) | Komisi |
-| swap | DECIMAL(18,2) | Swap |
-| fee | DECIMAL(18,2) | Biaya tambahan |
-| executed_at | DATETIME | Waktu eksekusi |
-| created_at | DATETIME | Waktu dibuat |
-| updated_at | DATETIME | Waktu diperbarui |
-| deleted_at | DATETIME | Soft Delete |
+                     78 external_integrations        Integration      Mutable/revocable
 
----
-
-### Constraint
+                     79 integration_credentials      Integration      Secret-reference/revocable
 
-- Primary Key menggunakan UUID.
-- order_id wajib mengacu ke tabel Orders.
-- position_id wajib mengacu ke tabel Positions.
-- account_id wajib mengacu ke tabel Trading Accounts.
-- symbol_id wajib mengacu ke tabel Trading Symbols.
-- broker_deal_id harus unik dalam satu Trading Account.
-- volume harus lebih besar dari 0.
-- execution_price harus lebih besar dari 0.
-- Soft Delete menggunakan kolom `deleted_at`.
+                     80 system_settings              Operations       Mutable
 
----
+                     81 feature_flags                Operations       Mutable
 
-### Relasi
+                     82 jobs                         Operations       Lifecycle
 
-- Satu Order dapat menghasilkan satu atau lebih Deal.
-- Satu Position dapat memiliki banyak Deal.
-- Satu Trading Account memiliki banyak Deal.
-- Satu Trading Symbol dapat digunakan oleh banyak Deal.
-- Deal dapat direferensikan pada Trading Journal.
-- Seluruh aktivitas Deal dicatat pada Audit Log.
+                     83 job_executions               Operations       Append/lifecycle
 
----
+                     84 api_usage_records            Operations       Append-only
 
-### Index
+                     85 backup_records               Operations       Append-only
 
-- PK(id)
-- INDEX(order_id)
-- INDEX(position_id)
-- INDEX(account_id)
-- INDEX(symbol_id)
-- UNIQUE(account_id, broker_deal_id)
-- INDEX(executed_at)
+                     86 system_events                Operations       Append-only
+  ------------------------------------------------------------------------------------------------
 
----
+**Final logical catalog: 86 tables.**
 
-### Catatan
+------------------------------------------------------------------------
 
-Deals merupakan catatan permanen hasil eksekusi broker.
+# 38. Tables Explicitly Removed / Replaced From Earlier Design
 
-Nilai `realized_profit` hanya tersedia setelah transaksi benar-benar dieksekusi.
+The following concepts must not remain as conflicting duplicate masters:
 
-Deals menjadi sumber utama laporan transaksi, histori trading, rekonsiliasi broker, dan Performance Analytics.
+### `trading_symbols`
 
----
+Replaced by:
 
-### Future Development
+-   `instruments`
+-   `broker_symbols`
+-   `symbol_mappings`
 
-- Multi Broker Deal Synchronization
-- Deal Replay
-- Commission Breakdown
-- Liquidity Provider Tracking
-- Slippage Analytics
-- Execution Performance Analytics
+Reason: broker-specific symbol names and trading rules differ.
 
-## 6.9 Tabel Trading Journal
+### Broker `platform` column
 
-### Tujuan
+Removed from the broker master.
 
-Menyimpan jurnal, evaluasi, dan pembelajaran dari setiap aktivitas trading.
+Replaced by:
 
-Trading Journal menjadi media dokumentasi alasan entry, exit, evaluasi AI, evaluasi pengguna, serta pembelajaran yang digunakan untuk meningkatkan kualitas Strategy dan AI Engine.
+-   `platforms`
+-   `broker_platforms`
 
----
+### Strategy `version` column as executable state
 
-### Struktur Tabel
+Moved to:
 
-| Kolom | Tipe | Keterangan |
-|--------|------|------------|
-| id | UUID | Primary Key |
-| account_id | UUID | Relasi ke Trading Account |
-| position_id | UUID | Relasi ke Positions |
-| strategy_id | UUID | Relasi ke Strategy (nullable) |
-| ai_analysis_id | UUID | Relasi ke AI Analysis (nullable) |
-| entry_reason | TEXT | Alasan membuka posisi |
-| exit_reason | TEXT | Alasan menutup posisi |
-| market_condition | VARCHAR(100) | Kondisi pasar |
-| emotion | VARCHAR(50) | Catatan psikologi trader (opsional) |
-| ai_confidence | DECIMAL(5,2) | Tingkat keyakinan AI (%) |
-| user_rating | SMALLINT | Penilaian pengguna (1–5) |
-| lesson_learned | TEXT | Pelajaran yang diperoleh |
-| notes | TEXT | Catatan tambahan |
-| created_at | DATETIME | Waktu dibuat |
-| updated_at | DATETIME | Waktu diperbarui |
-| deleted_at | DATETIME | Soft Delete |
+-   `strategy_versions`
 
----
+### Strategy risk defaults
 
-### Constraint
+Moved to:
 
-- Primary Key menggunakan UUID.
-- account_id wajib mengacu ke tabel Trading Accounts.
-- position_id wajib mengacu ke tabel Positions.
-- strategy_id mengacu ke tabel Strategy (opsional).
-- ai_analysis_id mengacu ke tabel AI Analysis (opsional).
-- user_rating hanya boleh bernilai 1 sampai 5.
-- ai_confidence berada pada rentang 0.00 sampai 100.00.
-- Soft Delete menggunakan kolom `deleted_at`.
+-   `risk_policies`
+-   `risk_rules`
 
----
+where they represent actual risk controls.
 
-### Relasi
+### Order → Position as mandatory direct relationship
 
-- Satu Trading Account memiliki banyak Trading Journal.
-- Satu Position memiliki satu Trading Journal utama.
-- Satu Strategy dapat digunakan oleh banyak Trading Journal.
-- Satu AI Analysis dapat direferensikan oleh banyak Trading Journal.
-- Seluruh perubahan Trading Journal dicatat pada Audit Log.
+Removed.
 
----
+Use:
 
-### Index
+`order → executions → deals → positions`
 
-- PK(id)
-- INDEX(account_id)
-- INDEX(position_id)
-- INDEX(strategy_id)
-- INDEX(ai_analysis_id)
-- INDEX(created_at)
+with platform/account-mode-specific position aggregation.
 
----
+### Plaintext credentials
 
-### Catatan
+Removed from business tables.
 
-Trading Journal dapat diisi secara manual oleh pengguna maupun secara otomatis oleh AI Engine atau Workflow Engine.
+Use secret references.
 
-Data pada tabel ini menjadi dasar evaluasi performa Strategy, AI, serta pengembangan sistem pembelajaran OHTATS.
+------------------------------------------------------------------------
 
----
+# 39. Migration Requirements
 
-### Future Development
+Migration from the previous design must be done in controlled phases:
 
-- AI Trading Review
-- Screenshot Attachment
-- Voice Note Journal
-- Emotion Analytics
-- Strategy Improvement Recommendation
-- AI Learning Dataset
+1.  Create new master tables.
+2.  Create compatibility columns/tables only when necessary.
+3.  Migrate brokers into `brokers`, `platforms`, and `broker_platforms`.
+4.  Migrate old symbols into `instruments`.
+5.  Create `broker_symbols` for broker-specific names/rules.
+6.  Create symbol mappings.
+7.  Create strategy identities and versions.
+8.  Migrate old strategy configuration into version/parameter/risk
+    structures.
+9.  Create trading request/order event/execution/deal relationships.
+10. Backfill historical order/execution/deal relationships where
+    evidence exists.
+11. Do not invent missing historical relationships.
+12. Validate all FK and uniqueness constraints.
+13. Switch application reads/writes.
+14. Remove obsolete structures only after successful validation and
+    backup.
+15. Record migration in the migration system and audit trail.
 
-## 6.10 Tabel AI Analysis
+------------------------------------------------------------------------
 
-### Tujuan
+# 40. Final Integrity Checklist
 
-Menyimpan seluruh hasil analisis AI terhadap kondisi pasar sebagai dasar pengambilan keputusan trading, evaluasi strategi, Explainable AI (XAI), dan pembelajaran model AI.
+Before database implementation is declared complete:
 
-Digunakan oleh:
+-   [ ] all 86 tables are defined;
+-   [ ] every PK exists;
+-   [ ] every FK target exists;
+-   [ ] every FK datatype is compatible;
+-   [ ] no duplicate master entity remains;
+-   [ ] no global uniqueness exists where broker/platform scope is
+    required;
+-   [ ] MT4 supported;
+-   [ ] MT5 supported;
+-   [ ] TradingView supported;
+-   [ ] multi-broker supported;
+-   [ ] multi-account supported;
+-   [ ] hedging/netting can be represented;
+-   [ ] partial fills supported;
+-   [ ] order lifecycle is event-capable;
+-   [ ] deal history is append-only;
+-   [ ] strategy versioning is reproducible;
+-   [ ] backtest dataset is versioned;
+-   [ ] AI provider/model is separated;
+-   [ ] AI decision cannot bypass risk/trading pipeline;
+-   [ ] copy trading maps source to target symbols;
+-   [ ] copy trading uses normal risk/trading pipeline;
+-   [ ] secrets are references, not plaintext;
+-   [ ] audit is append-only;
+-   [ ] security events are append-only;
+-   [ ] market-data storage can scale independently;
+-   [ ] migrations are versioned;
+-   [ ] retention is policy-driven.
 
-- Trading Engine
-- Workflow Engine
-- Dashboard
-- Trading Journal
-- Backtest
-- AI Evaluation
+------------------------------------------------------------------------
 
----
+# 41. Definition of Done
 
-### Struktur Tabel
+`DATABASE_DESIGN.md` is considered final when:
 
-| Kolom | Tipe | Keterangan |
-|--------|------|------------|
-| id | UUID | Primary Key |
-| account_id | UUID | Relasi ke Trading Account (nullable) |
-| strategy_id | UUID | Relasi ke Strategy (nullable) |
-| provider_id | UUID | Relasi ke AI Provider |
-| symbol_id | UUID | Relasi ke Trading Symbols |
-| timeframe | VARCHAR(20) | Timeframe analisis |
-| analysis_type | ENUM(PRE_TRADE, IN_TRADE, POST_TRADE, MARKET_SCAN) | Jenis analisis |
-| recommendation | ENUM(BUY, SELL, HOLD, CLOSE, NONE) | Rekomendasi AI |
-| confidence_score | DECIMAL(5,2) | Tingkat keyakinan (%) |
-| summary | TEXT | Ringkasan hasil analisis |
-| reasoning | TEXT | Penjelasan rekomendasi |
-| input_tokens | INTEGER | Jumlah token input |
-| output_tokens | INTEGER | Jumlah token output |
-| response_time_ms | INTEGER | Waktu respons AI |
-| created_at | DATETIME | Waktu dibuat |
-| updated_at | DATETIME | Waktu diperbarui |
-| deleted_at | DATETIME | Soft Delete |
+1.  The application architecture can map every persistent business
+    capability to an entity.
+2.  Every persistent entity has an explicit lifecycle.
+3.  Every relationship has an explicit owner/cardinality.
+4.  Every critical historical action has an append-only record where
+    required.
+5.  Trading data is separated from backtest data.
+6.  Canonical instruments are separated from broker symbols.
+7.  Strategy identity is separated from executable versions.
+8.  AI output is separated from executable trading commands.
+9.  Credentials are externalized through secret references.
+10. The design does not require one particular database/storage vendor.
+11. Future MT5/TradingView/broker/API/plugin expansion does not require
+    redesigning core identity tables.
 
----
+------------------------------------------------------------------------
 
-### Constraint
-
-- Primary Key menggunakan UUID.
-- account_id mengacu ke Trading Accounts (opsional).
-- strategy_id mengacu ke Strategy (opsional).
-- provider_id wajib mengacu ke AI Providers.
-- symbol_id wajib mengacu ke Trading Symbols.
-- confidence_score berada pada rentang 0.00–100.00.
-- response_time_ms tidak boleh bernilai negatif.
-- Soft Delete menggunakan kolom `deleted_at`.
-
----
-
-### Relasi
-
-- Trading Account memiliki banyak AI Analysis.
-- Strategy memiliki banyak AI Analysis.
-- AI Provider memiliki banyak AI Analysis.
-- Trading Symbol memiliki banyak AI Analysis.
-- AI Analysis dapat digunakan oleh Trading Journal.
-- AI Analysis dapat digunakan oleh Workflow.
-- Aktivitas AI Analysis dicatat pada Audit Log.
-
----
-
-### Index
-
-- PK(id)
-- INDEX(provider_id)
-- INDEX(account_id)
-- INDEX(strategy_id)
-- INDEX(symbol_id)
-- INDEX(timeframe)
-- INDEX(analysis_type)
-- INDEX(created_at)
-
----
-
-### Catatan
-
-AI Analysis dapat digunakan oleh berbagai modul OHTATS.
-
-Kolom `reasoning` mendukung prinsip Explainable AI (XAI).
-
-Informasi token bersifat opsional karena tidak semua AI Provider menyediakannya.
-
----
-
-### Future Development
-
-- Prompt Versioning
-- AI Comparison
-- Multi AI Consensus
-- AI Cost Analytics
-- AI Hallucination Detection
-- AI Performance Benchmark
-
-## 6.11 Tabel Workflows
-
-### Tujuan
-
-Menyimpan identitas dan metadata seluruh Workflow OHTATS yang digunakan untuk mengotomatisasi proses bisnis dan trading.
-
-Workflow berfungsi sebagai master dan pusat konfigurasi otomatisasi sistem, sedangkan definisi dan riwayat versi Workflow disimpan pada tabel Workflow Versions.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| name | VARCHAR(150) | Nama Workflow |
-| code | VARCHAR(100) | Kode unik Workflow |
-| description | TEXT | Deskripsi Workflow |
-| category | VARCHAR(100) | Kategori Workflow |
-| status | ENUM(DRAFT,ACTIVE,INACTIVE,ARCHIVED) | Status Workflow |
-| trigger_type | ENUM(MANUAL,SCHEDULE,EVENT,AI,API) | Jenis pemicu Workflow |
-| is_official | BOOLEAN | Menandai Workflow resmi OHTATS |
-| created_by | UUID | User pembuat Workflow |
-| updated_by | UUID | User yang terakhir mengubah metadata Workflow |
-| created_at | DATETIME | Waktu Workflow dibuat |
-| updated_at | DATETIME | Waktu metadata Workflow diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
-### Constraint
-
-- Primary Key: `id`.
-- `code` harus unik.
-- Foreign Key: `created_by → users.id`.
-- Foreign Key: `updated_by → users.id`.
-- `status` hanya boleh menggunakan nilai yang telah ditentukan.
-- `trigger_type` hanya boleh menggunakan nilai yang telah ditentukan.
-- Soft Delete menggunakan kolom `deleted_at`.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Users | Many to One | Workflow dibuat dan dapat diperbarui oleh User |
-| Workflow Versions | One to Many | Satu Workflow memiliki banyak Workflow Version |
-| Workflow Executions | One to Many | Satu Workflow memiliki banyak Workflow Execution |
-| Strategies | Konseptual | Workflow dapat menggunakan Strategy sebagai bagian dari proses |
-| AI Analysis | Konseptual | Workflow dapat menggunakan hasil AI Analysis |
-| Audit Logs | One to Many | Aktivitas penting Workflow dapat dicatat pada Audit Log |
-
-### Catatan
-
-- Workflow menyimpan identitas dan metadata Workflow.
-- Definisi Workflow disimpan pada `Workflow Versions.definition`.
-- Riwayat perubahan definisi Workflow disimpan pada tabel Workflow Versions.
-- Setiap eksekusi Workflow harus mengacu pada Workflow Version yang digunakan saat eksekusi.
-- Perubahan definisi Workflow tidak mengubah histori Workflow Execution yang telah terjadi.
-- Workflow dapat berupa Workflow resmi OHTATS maupun Workflow yang dibuat oleh User.
-- Metadata Workflow dapat diperbarui selama Workflow masih dikelola oleh sistem.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `UNIQUE(code)`
-- `INDEX(status)`
-- `INDEX(category)`
-- `INDEX(trigger_type)`
-- `INDEX(created_by)`
-- `INDEX(created_at)`
-
-### Future Development
-
-- Visual Workflow Builder
-- Workflow Marketplace
-- Workflow Template
-- Workflow Simulation
-- Workflow Sharing
-- Workflow Validation Engine
-- Workflow Dependency Management
-
-## 6.12 Tabel Workflow Executions
-
-### Tujuan
-
-Menyimpan seluruh riwayat eksekusi Workflow OHTATS sebagai dasar monitoring, audit, debugging, troubleshooting, dan analisis performa.
-
-Workflow Execution merepresentasikan satu proses eksekusi terhadap versi Workflow tertentu.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| workflow_id | UUID | Relasi ke Workflows |
-| workflow_version_id | UUID | Relasi ke Workflow Versions yang dieksekusi |
-| account_id | UUID | Relasi ke Trading Account (nullable) |
-| strategy_id | UUID | Relasi ke Strategy (nullable) |
-| ai_analysis_id | UUID | Relasi ke AI Analysis (nullable) |
-| trigger_type | ENUM(MANUAL,SCHEDULE,EVENT,AI,API) | Pemicu Workflow |
-| execution_status | ENUM(PENDING,RUNNING,SUCCESS,FAILED,CANCELLED) | Status eksekusi |
-| started_at | DATETIME | Waktu eksekusi dimulai (nullable) |
-| finished_at | DATETIME | Waktu eksekusi selesai (nullable) |
-| duration_ms | INTEGER | Durasi eksekusi dalam milidetik (nullable) |
-| error_message | TEXT | Pesan kesalahan (nullable) |
-| execution_log | TEXT | Ringkasan proses eksekusi |
-| created_at | DATETIME | Waktu record dibuat |
-| updated_at | DATETIME | Waktu record diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
-### Constraint
-
-- Primary Key: `id`.
-- Foreign Key: `workflow_id → workflows.id`.
-- Foreign Key: `workflow_version_id → workflow_versions.id`.
-- Foreign Key: `account_id → trading_accounts.id` (nullable).
-- Foreign Key: `strategy_id → strategies.id` (nullable).
-- Foreign Key: `ai_analysis_id → ai_analysis.id` (nullable).
-- `workflow_version_id` harus mengacu pada Workflow Version yang berasal dari `workflow_id` yang sama.
-- `trigger_type` hanya boleh menggunakan nilai yang telah ditentukan.
-- `execution_status` hanya boleh menggunakan nilai yang telah ditentukan.
-- `duration_ms` tidak boleh bernilai negatif.
-- `finished_at` tidak boleh lebih awal dari `started_at`.
-- `duration_ms` harus merepresentasikan durasi antara `started_at` dan `finished_at` apabila keduanya tersedia.
-- Soft Delete menggunakan kolom `deleted_at`.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Workflows | Many to One | Execution berasal dari satu Workflow |
-| Workflow Versions | Many to One | Execution menggunakan satu Workflow Version tertentu |
-| Trading Accounts | Many to One | Execution dapat terkait dengan Trading Account |
-| Strategies | Many to One | Execution dapat menggunakan Strategy |
-| AI Analysis | Many to One | Execution dapat menggunakan hasil AI Analysis |
-| Audit Logs | One to Many | Aktivitas penting Workflow Execution dapat dicatat pada Audit Log |
-| Job Queue | Konseptual | Workflow Execution dapat dijalankan melalui asynchronous Job |
-
-### Catatan
-
-- Satu Workflow Execution mewakili satu proses eksekusi Workflow.
-- `workflow_version_id` mencatat versi Workflow yang benar-benar digunakan saat eksekusi.
-- Workflow Execution tidak mengubah definisi Workflow maupun Workflow Version.
-- Workflow Version yang telah digunakan tetap dapat ditelusuri meskipun Workflow telah memiliki versi yang lebih baru.
-- Execution log digunakan untuk monitoring dan troubleshooting.
-- Error detail dapat disimpan pada `error_message` apabila eksekusi gagal.
-- Data Workflow Execution dapat digunakan untuk analisis performa dan reliability Workflow.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `INDEX(workflow_id)`
-- `INDEX(workflow_version_id)`
-- `INDEX(account_id)`
-- `INDEX(strategy_id)`
-- `INDEX(ai_analysis_id)`
-- `INDEX(execution_status)`
-- `INDEX(started_at)`
-- `INDEX(created_at)`
-
-### Future Development
-
-- Execution Replay
-- Distributed Execution
-- Queue Monitoring
-- Performance Analytics
-- Automatic Retry
-- Workflow Timeline
-- Execution Trace
-- Execution Comparison
-
-## 6.13 Tabel Workflow Versions
-
-### Tujuan
-
-Menyimpan seluruh riwayat versi Workflow OHTATS.
-
-Workflow Version digunakan untuk:
-
-- Menyimpan snapshot definisi Workflow.
-- Mendukung version control.
-- Mendukung rollback.
-- Menyediakan histori perubahan Workflow.
-- Mendukung audit dan reproducibility Workflow Execution.
-- Memastikan Workflow Execution dapat ditelusuri ke definisi yang digunakan pada saat eksekusi.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| workflow_id | UUID | Relasi ke Workflows |
-| version | VARCHAR(20) | Semantic Version |
-| definition | JSON | Snapshot definisi Workflow |
-| change_summary | TEXT | Ringkasan perubahan |
-| is_current | BOOLEAN | Menandai versi aktif saat ini |
-| created_by | UUID | User pembuat versi |
-| created_at | DATETIME | Waktu versi dibuat |
-
-### Constraint
-
-- Primary Key: `id`.
-- Foreign Key: `workflow_id → workflows.id`.
-- Foreign Key: `created_by → users.id`.
-- Kombinasi `(workflow_id, version)` harus unik.
-- `version` harus mengikuti Semantic Versioning.
-- Hanya satu Workflow Version yang dapat memiliki `is_current = TRUE` untuk setiap Workflow.
-- `definition` wajib berisi snapshot definisi Workflow.
-- Workflow Version bersifat immutable setelah dibuat.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Workflows | Many to One | Workflow Version merupakan versi dari satu Workflow |
-| Users | Many to One | Workflow Version dibuat oleh satu User |
-| Workflow Executions | One to Many | Satu Workflow Version dapat digunakan oleh banyak Workflow Execution |
-| Audit Logs | One to Many | Aktivitas pembuatan dan perubahan status versi dapat dicatat pada Audit Log |
-
-### Catatan
-
-- Setiap perubahan pada definisi Workflow menghasilkan Workflow Version baru.
-- `definition` menyimpan snapshot lengkap definisi Workflow pada versi tersebut.
-- Workflow Version tidak boleh diubah setelah dibuat.
-- Workflow Version tidak boleh dihapus secara langsung.
-- `is_current = TRUE` menunjukkan versi aktif yang digunakan sebagai versi terkini Workflow.
-- Workflow Execution menyimpan `workflow_version_id` agar eksekusi dapat direproduksi dan diaudit berdasarkan definisi yang benar-benar digunakan.
-- Rollback dilakukan dengan memilih Workflow Version sebelumnya sebagai versi aktif baru, bukan dengan mengubah isi Workflow Version lama.
-- Riwayat versi menjadi dasar audit dan version control Workflow.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `UNIQUE(workflow_id, version)`
-- `INDEX(workflow_id)`
-- `INDEX(is_current)`
-- `INDEX(created_by)`
-- `INDEX(created_at)`
-
-### Future Development
-
-- Visual Version Diff
-- Rollback Wizard
-- Branch Workflow
-- Merge Workflow
-- Approval Workflow Version
-- Version Comparison
-- Version Integrity Verification
-- Workflow Version Deployment
-
-## 6.14 Tabel Plugins
-
-### Tujuan
-
-Menyimpan metadata seluruh Plugin yang tersedia pada platform OHTATS.
-
-Plugins berfungsi sebagai pusat pengelolaan komponen tambahan OHTATS, baik yang dikembangkan oleh OHTATS maupun pihak ketiga.
-
-Plugin mendukung:
-
-- Ekstensi kemampuan platform.
-- Integrasi dengan sistem eksternal.
-- EA dan Indicator.
-- Dashboard dan Utility.
-- Komponen AI.
-- Plugin Marketplace.
-- Pengelolaan lifecycle Plugin.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| name | VARCHAR(150) | Nama Plugin |
-| code | VARCHAR(100) | Kode unik Plugin |
-| plugin_type | VARCHAR(50) | Jenis Plugin seperti Integration, EA, Indicator, Dashboard, AI, Utility, dan lainnya |
-| category | VARCHAR(100) | Kategori Plugin |
-| developer_name | VARCHAR(150) | Nama Developer atau Publisher |
-| description | TEXT | Deskripsi Plugin |
-| status | ENUM(DRAFT,ACTIVE,DISABLED,DEPRECATED) | Status Plugin |
-| is_official | BOOLEAN | Menandai Plugin resmi OHTATS |
-| homepage | VARCHAR(255) | Website resmi Plugin (nullable) |
-| documentation_url | VARCHAR(255) | URL dokumentasi Plugin (nullable) |
-| created_at | DATETIME | Waktu Plugin dibuat |
-| updated_at | DATETIME | Waktu metadata Plugin diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
-### Constraint
-
-- Primary Key: `id`.
-- `code` harus unik.
-- `status` hanya boleh menggunakan nilai yang telah ditentukan.
-- `plugin_type` wajib menggunakan kategori Plugin yang didukung oleh sistem.
-- Soft Delete menggunakan kolom `deleted_at`.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Plugin Versions | One to Many | Satu Plugin memiliki banyak Plugin Version |
-| Plugin Installations | One to Many | Satu Plugin dapat dipasang pada banyak Trading Account |
-| Audit Logs | One to Many | Aktivitas penting Plugin dapat dicatat pada Audit Log |
-
-### Catatan
-
-- Plugin dapat dikembangkan oleh OHTATS maupun pihak ketiga.
-- Plugin merupakan metadata/master Plugin, sedangkan riwayat versi disimpan pada Plugin Versions.
-- Plugin dapat dinonaktifkan tanpa menghapus metadata maupun riwayat versinya.
-- `code` menjadi identitas unik Plugin di dalam platform.
-- Plugin resmi OHTATS ditandai menggunakan `is_official = TRUE`.
-- Status `DEPRECATED` digunakan untuk Plugin yang tidak lagi direkomendasikan tetapi masih perlu dipertahankan untuk kompatibilitas dan histori.
-- Credential, API Key, Token, Secret, Password, dan data sensitif lainnya tidak boleh disimpan pada tabel Plugins.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `UNIQUE(code)`
-- `INDEX(plugin_type)`
-- `INDEX(category)`
-- `INDEX(developer_name)`
-- `INDEX(status)`
-- `INDEX(is_official)`
-- `INDEX(created_at)`
-
-### Future Development
-
-- Plugin Marketplace
-- Plugin Rating
-- Plugin Review
-- Dependency Management
-- Plugin License Management
-- Plugin Compatibility Management
-- Automatic Plugin Update
-- Plugin Security Verification
-
-## 6.15 Tabel Plugin Versions
-
-### Tujuan
-
-Menyimpan seluruh riwayat versi Plugin OHTATS.
-
-Plugin Versions digunakan untuk:
-
-- Mengelola version control Plugin.
-- Menyimpan paket Plugin berdasarkan versi.
-- Mendukung rollback.
-- Memastikan kompatibilitas Plugin.
-- Memverifikasi integritas paket.
-- Mendukung distribusi Plugin.
-- Menyediakan histori versi untuk audit.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| plugin_id | UUID | Relasi ke Plugins |
-| version | VARCHAR(20) | Semantic Version |
-| release_notes | TEXT | Catatan perubahan versi |
-| package_file | VARCHAR(255) | Referensi lokasi paket Plugin |
-| checksum | VARCHAR(128) | Hash untuk verifikasi integritas paket |
-| checksum_algorithm | ENUM(SHA256,SHA512) | Algoritma checksum |
-| file_size | BIGINT | Ukuran paket dalam byte |
-| minimum_ohtats_version | VARCHAR(20) | Minimum versi OHTATS yang didukung |
-| is_current | BOOLEAN | Menandai versi aktif/terkini |
-| released_at | DATETIME | Waktu versi dirilis |
-| created_at | DATETIME | Waktu record versi dibuat |
-
-### Constraint
-
-- Primary Key: `id`.
-- Foreign Key: `plugin_id → plugins.id`.
-- Kombinasi `(plugin_id, version)` harus unik.
-- `version` harus mengikuti Semantic Versioning.
-- `file_size` tidak boleh bernilai negatif.
-- `checksum` wajib tersedia untuk paket Plugin yang telah dirilis.
-- `checksum_algorithm` wajib diisi apabila `checksum` memiliki nilai.
-- Hanya satu Plugin Version yang dapat memiliki `is_current = TRUE` untuk setiap Plugin.
-- Plugin Version bersifat immutable setelah dibuat.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Plugins | Many to One | Plugin Version merupakan versi dari satu Plugin |
-| Plugin Installations | One to Many | Satu Plugin Version dapat digunakan oleh banyak instalasi |
-| Audit Logs | One to Many | Aktivitas penting Plugin Version dapat dicatat pada Audit Log |
-
-### Catatan
-
-- Setiap versi Plugin memiliki kombinasi `(plugin_id, version)` yang unik.
-- Plugin Version menyimpan snapshot paket Plugin pada versi tertentu.
-- Plugin Version tidak boleh diubah setelah dirilis.
-- Plugin Version tidak boleh dihapus secara langsung.
-- `is_current = TRUE` menunjukkan versi terbaru/aktif yang digunakan sebagai versi utama Plugin.
-- Checksum digunakan untuk memastikan integritas paket Plugin.
-- Paket Plugin dapat disimpan pada penyimpanan lokal maupun cloud.
-- Credential penyimpanan, API Key, Secret, Token, dan data autentikasi tidak disimpan pada tabel ini.
-- Rollback dilakukan dengan memilih versi Plugin sebelumnya, bukan dengan mengubah isi versi lama.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `UNIQUE(plugin_id, version)`
-- `INDEX(plugin_id)`
-- `INDEX(is_current)`
-- `INDEX(released_at)`
-- `INDEX(minimum_ohtats_version)`
-
-### Future Development
-
-- Digital Signature
-- Delta Update
-- Compatibility Checker
-- Rollback Package
-- Multi Repository Support
-- Automatic Integrity Verification
-- Plugin Security Scanner
-- Dependency Locking
-
-## 6.16 Tabel Plugin Installations
-
-### Tujuan
-
-Mencatat seluruh instalasi Plugin pada Trading Account OHTATS.
-
-Plugin Installation digunakan untuk:
-
-- Mengelola instalasi Plugin.
-- Mengaktifkan dan menonaktifkan Plugin.
-- Menentukan versi Plugin yang digunakan.
-- Mendukung pembaruan Plugin.
-- Mendukung rollback Plugin.
-- Menyimpan histori lifecycle instalasi.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| account_id | UUID | Relasi ke Trading Accounts |
-| plugin_id | UUID | Relasi ke Plugins |
-| plugin_version_id | UUID | Relasi ke Plugin Versions |
-| installation_status | ENUM(INSTALLED,ACTIVE,DISABLED,UNINSTALLED) | Status instalasi |
-| installed_at | DATETIME | Waktu instalasi |
-| activated_at | DATETIME | Waktu aktivasi (nullable) |
-| updated_at | DATETIME | Waktu terakhir instalasi diperbarui |
-| uninstalled_at | DATETIME | Waktu Plugin dihapus dari Account (nullable) |
-| created_at | DATETIME | Waktu record dibuat |
-| deleted_at | DATETIME | Soft Delete |
-
-### Constraint
-
-- Primary Key: `id`.
-- Foreign Key: `account_id → trading_accounts.id`.
-- Foreign Key: `plugin_id → plugins.id`.
-- Foreign Key: `plugin_version_id → plugin_versions.id`.
-- `plugin_version_id` harus mengacu pada Plugin Version yang berasal dari `plugin_id` yang sama.
-- Kombinasi `(account_id, plugin_id)` harus unik untuk instalasi aktif.
-- `installation_status` hanya boleh menggunakan nilai yang telah ditentukan.
-- `activated_at` wajib tersedia apabila status `ACTIVE`.
-- `uninstalled_at` wajib tersedia apabila status `UNINSTALLED`.
-- Soft Delete menggunakan kolom `deleted_at`.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Trading Accounts | Many to One | Instalasi dimiliki oleh satu Trading Account |
-| Plugins | Many to One | Instalasi menggunakan satu Plugin |
-| Plugin Versions | Many to One | Instalasi menggunakan satu versi Plugin tertentu |
-| Audit Logs | One to Many | Aktivitas instalasi Plugin dapat dicatat pada Audit Log |
-
-### Catatan
-
-- Satu Trading Account dapat memiliki banyak Plugin Installation.
-- Satu Plugin dapat dipasang pada banyak Trading Account.
-- Satu Plugin Version dapat digunakan oleh banyak instalasi.
-- Instalasi selalu mengacu pada satu versi Plugin tertentu.
-- Plugin dapat dinonaktifkan tanpa menghapus metadata Plugin.
-- Perubahan versi Plugin pada instalasi harus dicatat sebagai perubahan lifecycle instalasi.
-- Rollback Plugin dilakukan dengan memilih Plugin Version yang kompatibel.
-- Credential Plugin tidak boleh disimpan secara plaintext pada tabel Plugin Installations.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `UNIQUE(account_id, plugin_id)`
-- `INDEX(plugin_version_id)`
-- `INDEX(installation_status)`
-- `INDEX(installed_at)`
-- `INDEX(created_at)`
-
-### Future Development
-
-- Automatic Plugin Update
-- Plugin Dependency Resolver
-- Plugin Rollback
-- Plugin Health Monitoring
-- Remote Installation
-- Bulk Plugin Deployment
-- Plugin Compatibility Validation
-- Installation Repair
-
-## 6.17 Tabel External Integrations
-
-### Tujuan
-
-Menyimpan konfigurasi dan metadata integrasi OHTATS dengan layanan eksternal.
-
-External Integrations digunakan untuk:
-
-- Komunikasi API.
-- Webhook.
-- Notifikasi.
-- Sinkronisasi data.
-- Penyimpanan cloud.
-- Integrasi TradingView.
-- Integrasi layanan komunikasi.
-- Integrasi layanan eksternal lainnya.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| account_id | UUID | Relasi ke Trading Accounts (nullable) |
-| integration_name | VARCHAR(150) | Nama Integrasi |
-| integration_type | ENUM(API,WEBHOOK,EMAIL,TELEGRAM,DISCORD,TRADINGVIEW,GOOGLE_DRIVE,ONEDRIVE,DROPBOX,OTHER) | Jenis Integrasi |
-| provider | VARCHAR(150) | Nama penyedia layanan |
-| authentication_type | VARCHAR(50) | Jenis autentikasi seperti API Key, OAuth, Token, atau Basic Auth |
-| endpoint_url | VARCHAR(255) | URL Endpoint (nullable) |
-| configuration | JSON | Konfigurasi non-rahasia Integrasi |
-| status | ENUM(ACTIVE,INACTIVE,ERROR) | Status Integrasi |
-| last_sync_at | DATETIME | Waktu sinkronisasi terakhir (nullable) |
-| last_error | TEXT | Error terakhir (nullable) |
-| created_at | DATETIME | Waktu Integrasi dibuat |
-| updated_at | DATETIME | Waktu Integrasi diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
-### Constraint
-
-- Primary Key: `id`.
-- Foreign Key: `account_id → trading_accounts.id` (nullable).
-- `integration_type` hanya boleh menggunakan nilai yang telah ditentukan.
-- `status` hanya boleh menggunakan nilai yang telah ditentukan.
-- `configuration` hanya boleh menyimpan konfigurasi non-rahasia.
-- Credential, API Key, Access Token, Refresh Token, Secret, Password, dan data autentikasi sensitif tidak boleh disimpan dalam bentuk plaintext pada tabel ini.
-- Secret wajib dikelola melalui mekanisme Secret Management yang sesuai.
-- Soft Delete menggunakan kolom `deleted_at`.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Trading Accounts | Many to One | Integrasi dapat dimiliki oleh satu Trading Account |
-| Workflow Executions | Konseptual | Workflow Execution dapat menggunakan External Integration |
-| API Usage | One to Many | Penggunaan API melalui integrasi dapat dicatat pada API Usage |
-| Audit Logs | One to Many | Aktivitas penting External Integration dapat dicatat pada Audit Log |
-
-### Catatan
-
-- External Integration dapat bersifat global atau terkait dengan Trading Account tertentu.
-- `account_id = NULL` menunjukkan integrasi tidak terikat pada satu Trading Account tertentu.
-- `configuration` digunakan untuk menyimpan konfigurasi non-rahasia yang fleksibel.
-- Credential dan secret wajib menggunakan mekanisme Secret Management.
-- `authentication_type` menjelaskan metode autentikasi tanpa menyimpan credential aktual.
-- Integrasi dapat dinonaktifkan tanpa menghapus histori konfigurasi dan aktivitas.
-- Endpoint dan konfigurasi harus divalidasi sebelum Integrasi diaktifkan.
-- Integrasi yang mengalami error dapat tetap dipertahankan untuk troubleshooting dan audit.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `INDEX(account_id)`
-- `INDEX(integration_type)`
-- `INDEX(provider)`
-- `INDEX(status)`
-- `INDEX(last_sync_at)`
-- `INDEX(created_at)`
-
-### Future Development
-
-- OAuth Integration
-- Secret Vault Integration
-- Health Check Monitoring
-- Connection Pool
-- Integration Marketplace
-- Automatic Reconnect
-- Webhook Management
-- Integration Permission Management
-- Integration Health Dashboard
-
-## 6.18 Tabel Notifications
-
-### Tujuan
-
-Menyimpan seluruh notifikasi yang dihasilkan oleh sistem OHTATS.
-
-Notifications digunakan untuk:
-
-- Menyampaikan informasi kepada User.
-- Menyampaikan peringatan dan Alert.
-- Menyampaikan hasil proses sistem.
-- Mendukung berbagai kanal komunikasi.
-- Menyimpan riwayat pengiriman notifikasi.
-- Menyimpan status pembacaan notifikasi.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| user_id | UUID | Relasi ke Users |
-| account_id | UUID | Relasi ke Trading Accounts (nullable) |
-| notification_type | ENUM(INFO,WARNING,ERROR,SUCCESS,ALERT) | Jenis Notifikasi |
-| priority | ENUM(LOW,NORMAL,HIGH,CRITICAL) | Prioritas Notifikasi |
-| channel | ENUM(IN_APP,EMAIL,TELEGRAM,DISCORD,WEBHOOK,PUSH,SMS) | Kanal pengiriman |
-| title | VARCHAR(200) | Judul Notifikasi |
-| message | TEXT | Isi Notifikasi |
-| related_entity | VARCHAR(100) | Nama entitas terkait (nullable) |
-| related_entity_id | UUID | ID entitas terkait (nullable) |
-| status | ENUM(PENDING,SENT,FAILED) | Status pengiriman |
-| is_read | BOOLEAN | Status pembacaan User |
-| sent_at | DATETIME | Waktu pengiriman (nullable) |
-| read_at | DATETIME | Waktu dibaca (nullable) |
-| created_at | DATETIME | Waktu Notifikasi dibuat |
-| updated_at | DATETIME | Waktu Notifikasi diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
-### Constraint
-
-- Primary Key: `id`.
-- Foreign Key: `user_id → users.id`.
-- Foreign Key: `account_id → trading_accounts.id` (nullable).
-- `notification_type` hanya boleh menggunakan nilai yang telah ditentukan.
-- `priority` hanya boleh menggunakan nilai yang telah ditentukan.
-- `channel` hanya boleh menggunakan nilai yang telah ditentukan.
-- `status` hanya boleh menggunakan nilai yang telah ditentukan.
-- `read_at` wajib tersedia apabila `is_read = TRUE`.
-- `read_at` tidak boleh lebih awal daripada `sent_at` apabila keduanya memiliki nilai.
-- `sent_at` wajib tersedia apabila `status = SENT`.
-- Soft Delete menggunakan kolom `deleted_at`.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Users | Many to One | Notification ditujukan kepada satu User |
-| Trading Accounts | Many to One | Notification dapat terkait dengan satu Trading Account |
-| Workflow Executions | Konseptual | Notification dapat berasal dari Workflow Execution |
-| Orders | Konseptual | Notification dapat terkait dengan Order |
-| Positions | Konseptual | Notification dapat terkait dengan Position |
-| Audit Logs | One to Many | Aktivitas penting Notification dapat dicatat pada Audit Log |
-| Job Queue | Konseptual | Pengiriman Notification dapat diproses melalui asynchronous Job |
-
-### Catatan
-
-- Notification tetap disimpan sebagai histori meskipun telah dibaca.
-- `status` menunjukkan status pengiriman, sedangkan `is_read` menunjukkan status pembacaan User.
-- `status = SENT` tidak berarti Notification telah dibaca.
-- `related_entity` dan `related_entity_id` memungkinkan Notification dikaitkan dengan berbagai modul OHTATS secara fleksibel.
-- Relasi polymorphic melalui `related_entity` dan `related_entity_id` tidak menggunakan Foreign Key langsung.
-- Notification yang gagal dikirim dapat diproses ulang melalui mekanisme Queue.
-- Isi Notification tidak boleh menyimpan credential, API Key, Token, Password, atau Secret.
-- Data Notification dapat digunakan untuk monitoring dan analisis pengiriman.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `INDEX(user_id)`
-- `INDEX(account_id)`
-- `INDEX(notification_type)`
-- `INDEX(priority)`
-- `INDEX(channel)`
-- `INDEX(status)`
-- `INDEX(is_read)`
-- `INDEX(created_at)`
-
-### Future Development
-
-- Notification Queue
-- Scheduled Notification
-- Notification Template
-- Multi-language Notification
-- Notification Analytics
-- User Notification Preference
-- Notification Retry
-- Notification Digest
-- Real-time Notification
-- Notification Delivery Tracking
-
-## 6.19 Tabel Audit Logs
-
-### Tujuan
-
-Mencatat seluruh aktivitas penting yang terjadi pada sistem OHTATS.
-
-Audit Logs digunakan untuk:
-
-- Audit sistem.
-- Keamanan.
-- Troubleshooting.
-- Compliance.
-- Digital forensics.
-- Tracing aktivitas User dan sistem.
-- Investigasi perubahan konfigurasi dan data.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| user_id | UUID | Relasi ke Users (nullable) |
-| account_id | UUID | Relasi ke Trading Accounts (nullable) |
-| session_id | UUID | Relasi ke Session (nullable) |
-| request_id | VARCHAR(100) | ID request untuk tracing (nullable) |
-| event_source | ENUM(UI,API,WORKFLOW,WORKER,SYSTEM,PLUGIN,EXTERNAL) | Sumber aktivitas |
-| module | VARCHAR(100) | Nama modul |
-| entity_name | VARCHAR(100) | Nama entitas terkait (nullable) |
-| entity_id | UUID | ID entitas terkait (nullable) |
-| action | ENUM(CREATE,UPDATE,DELETE,LOGIN,LOGOUT,EXECUTE,IMPORT,EXPORT,APPROVE,REJECT,ENABLE,DISABLE) | Jenis aktivitas |
-| severity | ENUM(INFO,WARNING,ERROR,CRITICAL) | Tingkat prioritas |
-| old_value | JSON | Data sebelum perubahan (nullable) |
-| new_value | JSON | Data setelah perubahan (nullable) |
-| ip_address | VARCHAR(50) | Alamat IP (nullable) |
-| user_agent | TEXT | Informasi perangkat/browser (nullable) |
-| execution_result | ENUM(SUCCESS,FAILED) | Hasil eksekusi (nullable) |
-| error_message | TEXT | Pesan kesalahan (nullable) |
-| created_at | DATETIME | Waktu kejadian |
-
-### Constraint
-
-- Primary Key: `id`.
-- Foreign Key: `user_id → users.id` (nullable).
-- Foreign Key: `account_id → trading_accounts.id` (nullable).
-- `event_source` hanya boleh menggunakan nilai yang telah ditentukan.
-- `action` hanya boleh menggunakan nilai yang telah ditentukan.
-- `severity` hanya boleh menggunakan nilai yang telah ditentukan.
-- `execution_result` hanya digunakan apabila aktivitas menghasilkan status eksekusi.
-- `entity_id` bersifat nullable karena tidak semua aktivitas terkait dengan satu entitas tertentu.
-- Audit Log bersifat immutable dan append-only.
-- Audit Log tidak boleh diubah atau dihapus melalui operasi normal sistem.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Users | Many to One | Aktivitas dapat dilakukan oleh User |
-| Trading Accounts | Many to One | Aktivitas dapat terkait dengan Trading Account |
-| Sessions | Many to One | Aktivitas dapat berasal dari Session tertentu |
-| Orders | Konseptual | Audit dapat mereferensikan Order |
-| Positions | Konseptual | Audit dapat mereferensikan Position |
-| Workflows | Konseptual | Audit dapat mereferensikan Workflow |
-| Plugins | Konseptual | Audit dapat mereferensikan Plugin |
-| AI Analysis | Konseptual | Audit dapat mereferensikan AI Analysis |
-
-### Catatan
-
-- Audit Log bersifat immutable dan append-only.
-- Audit Log tidak boleh diubah setelah dibuat.
-- Audit Log tidak menggunakan mekanisme Soft Delete.
-- Setiap koreksi atau kejadian baru dicatat sebagai Audit Log baru.
-- Audit Log merupakan sumber utama investigasi, keamanan, troubleshooting, dan kepatuhan sistem.
-- Data credential, secret, token, password, API key, dan informasi sensitif wajib di-redact sebelum disimpan.
-- Data sensitif tidak boleh direkam secara plaintext pada `old_value`, `new_value`, `error_message`, maupun field lainnya.
-- `request_id` digunakan untuk menghubungkan aktivitas dari satu request atau proses.
-- `event_source` digunakan untuk mengetahui sumber aktivitas.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `INDEX(user_id)`
-- `INDEX(account_id)`
-- `INDEX(session_id)`
-- `INDEX(request_id)`
-- `INDEX(event_source)`
-- `INDEX(module)`
-- `INDEX(entity_name, entity_id)`
-- `INDEX(action)`
-- `INDEX(severity)`
-- `INDEX(created_at)`
-
-### Future Development
-
-- Centralized Logging
-- Log Retention Policy
-- Log Encryption
-- SIEM Integration
-- Real-time Monitoring
-- Security Incident Detection
-- Tamper Detection
-- Immutable Log Storage
-- Audit Log Archiving
-
-## 6.20 Tabel System Settings
-
-### Tujuan
-
-Menyimpan konfigurasi global platform OHTATS agar dapat dikelola tanpa mengubah source code.
-
-System Settings digunakan untuk:
-
-- Konfigurasi global platform.
-- Pengaturan perilaku sistem.
-- Pengaturan default modul.
-- Pengaturan AI Provider.
-- Pengaturan Workflow.
-- Pengaturan Notification.
-- Pengaturan operasional platform.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| category | VARCHAR(100) | Kategori pengaturan |
-| setting_key | VARCHAR(150) | Nama konfigurasi |
-| setting_value | TEXT | Nilai konfigurasi aktif |
-| default_value | TEXT | Nilai bawaan |
-| value_type | ENUM(STRING,INTEGER,BOOLEAN,FLOAT,JSON) | Jenis data |
-| description | TEXT | Penjelasan konfigurasi |
-| is_editable | BOOLEAN | Dapat diubah melalui Dashboard |
-| created_at | DATETIME | Waktu dibuat |
-| updated_at | DATETIME | Waktu diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
-### Constraint
-
-- Primary Key: `id`.
-- Kombinasi `(category, setting_key)` harus unik.
-- `value_type` hanya boleh menggunakan nilai yang telah ditentukan.
-- `setting_value` harus mengikuti `value_type`.
-- `default_value` harus mengikuti `value_type`.
-- Credential, API Key, Token, Secret, Password, dan data autentikasi sensitif tidak boleh disimpan pada tabel ini.
-- Soft Delete menggunakan kolom `deleted_at`.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Audit Logs | One to Many | Perubahan System Setting dicatat pada Audit Log |
-| AI Providers | Konseptual | System Setting dapat memengaruhi konfigurasi AI Provider |
-| Workflows | Konseptual | System Setting dapat memengaruhi perilaku Workflow |
-| Notifications | Konseptual | System Setting dapat memengaruhi sistem Notification |
-| Feature Flags | Konseptual | System Setting dapat digunakan bersama Feature Flags |
-
-### Catatan
-
-- System Settings menyimpan konfigurasi global, bukan credential atau secret.
-- Nilai konfigurasi dapat berupa String, Integer, Boolean, Float, maupun JSON.
-- `setting_value` harus divalidasi berdasarkan `value_type`.
-- Seluruh perubahan konfigurasi penting harus dicatat pada Audit Log.
-- Pengaturan yang bersifat sensitif harus menggunakan Secret Management.
-- Pengaturan yang tidak boleh diubah User ditandai dengan `is_editable = FALSE`.
-- Soft Delete digunakan untuk mempertahankan histori konfigurasi yang pernah tersedia.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `UNIQUE(category, setting_key)`
-- `INDEX(category)`
-- `INDEX(is_editable)`
-- `INDEX(created_at)`
-
-### Future Development
-
-- Configuration Versioning
-- Configuration Profile
-- Environment Override
-- Import / Export Configuration
-- Configuration Validation
-- Dynamic Reload
-- Configuration Rollback
-- Configuration Schema Validation
-- Secret Management Integration
-
-## 6.21 Tabel Feature Flags
-
-### Tujuan
-
-Mengelola fitur yang dapat diaktifkan maupun dinonaktifkan secara dinamis tanpa melakukan deploy ulang aplikasi.
-
-Feature Flags digunakan untuk:
-
-- Mengaktifkan atau menonaktifkan fitur.
-- Mengontrol peluncuran fitur secara bertahap.
-- Mengatur rollout fitur.
-- Mendukung Canary Release.
-- Mendukung eksperimen dan A/B Testing.
-- Membatasi fitur berdasarkan License atau Subscription.
-- Mengurangi risiko saat merilis fitur baru.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| feature_key | VARCHAR(150) | Kode unik fitur |
-| feature_name | VARCHAR(150) | Nama fitur |
-| category | VARCHAR(100) | Kategori fitur |
-| description | TEXT | Deskripsi fitur |
-| is_enabled | BOOLEAN | Status global fitur |
-| rollout_percentage | SMALLINT | Persentase rollout 0–100 |
-| minimum_license | VARCHAR(50) | Minimum License yang diperlukan (nullable) |
-| expires_at | DATETIME | Waktu berakhir Feature Flag (nullable) |
-| created_at | DATETIME | Waktu dibuat |
-| updated_at | DATETIME | Waktu diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
-### Constraint
-
-- Primary Key: `id`.
-- `feature_key` harus unik.
-- `rollout_percentage` harus berada pada rentang `0–100`.
-- `minimum_license` bersifat nullable.
-- `expires_at` bersifat nullable.
-- Feature Flag yang telah melewati `expires_at` harus dianggap tidak aktif oleh sistem.
-- Soft Delete menggunakan kolom `deleted_at`.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Audit Logs | One to Many | Perubahan Feature Flag dicatat pada Audit Log |
-| System Settings | Konseptual | Feature Flag dapat bekerja bersama System Settings |
-| Licenses | Konseptual | Feature Flag dapat membatasi fitur berdasarkan License |
-| Subscription Plans | Konseptual | Feature Flag dapat digunakan berdasarkan Subscription Plan |
-
-### Catatan
-
-- Feature Flag memungkinkan peluncuran fitur secara bertahap tanpa mengubah source code.
-- `is_enabled = FALSE` berarti fitur dinonaktifkan secara global.
-- `rollout_percentage = 100` berarti fitur tersedia untuk seluruh target yang memenuhi persyaratan.
-- `rollout_percentage = 0` berarti tidak ada target yang mendapatkan fitur.
-- Feature Flag dapat digunakan untuk membatasi fitur berdasarkan License atau Subscription.
-- Feature Flag yang telah melewati `expires_at` harus otomatis dianggap tidak aktif.
-- Perubahan Feature Flag wajib dicatat pada Audit Log.
-- Evaluasi Feature Flag harus dilakukan secara konsisten agar User tidak berpindah status rollout secara tidak terduga.
-- Mekanisme targeting yang lebih kompleks dapat dikembangkan tanpa mengubah konsep dasar Feature Flags.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `UNIQUE(feature_key)`
-- `INDEX(category)`
-- `INDEX(is_enabled)`
-- `INDEX(minimum_license)`
-- `INDEX(expires_at)`
-- `INDEX(created_at)`
-
-### Future Development
-
-- Percentage Rollout
-- A/B Testing
-- Canary Release
-- User Targeting
-- Region-based Rollout
-- Organization Targeting
-- Automatic Expiration
-- Feature Dependency
-- Feature Flag Environment
-- Feature Flag Audit Dashboard
-
-## 6.22 Tabel Licenses
-
-### Tujuan
-
-Menyimpan informasi lisensi dan hak akses pengguna terhadap platform OHTATS.
-
-License digunakan untuk:
-
-- Mengelola masa aktif akses ke platform OHTATS.
-- Menentukan paket langganan yang digunakan oleh User.
-- Menentukan batas penggunaan fitur dan resource.
-- Mendukung berbagai siklus langganan.
-- Menentukan mode penggunaan AI.
-- Menjadi dasar validasi hak akses dan pembatasan fitur.
-- Menyimpan snapshot hak akses yang berlaku pada saat License diterbitkan.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| user_id | UUID | Relasi ke Users |
-| subscription_plan_id | UUID | Relasi ke Subscription Plans |
-| license_code | VARCHAR(100) | Kode License unik |
-| billing_cycle | ENUM(WEEKLY,MONTHLY,YEARLY,LIFETIME) | Siklus langganan |
-| status | ENUM(PENDING,ACTIVE,SUSPENDED,EXPIRED,CANCELLED) | Status License |
-| max_accounts | INTEGER | Maksimum Trading Account yang diizinkan |
-| max_plugins | INTEGER | Maksimum Plugin aktif yang diizinkan |
-| max_workflows | INTEGER | Maksimum Workflow yang diizinkan |
-| ai_mode | ENUM(BYOK,OHTATS,HYBRID) | Mode penggunaan AI |
-| start_date | DATETIME | Waktu mulai berlaku |
-| end_date | DATETIME | Waktu berakhir (nullable untuk Lifetime) |
-| auto_renew | BOOLEAN | Menandai perpanjangan otomatis |
-| created_at | DATETIME | Waktu License dibuat |
-| updated_at | DATETIME | Waktu License diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
-### Constraint
-
-- Primary Key: `id`.
-- Foreign Key: `user_id → users.id`.
-- Foreign Key: `subscription_plan_id → subscription_plans.id`.
-- `license_code` harus unik.
-- `max_accounts` tidak boleh bernilai negatif.
-- `max_plugins` tidak boleh bernilai negatif.
-- `max_workflows` tidak boleh bernilai negatif.
-- `end_date` harus lebih besar atau sama dengan `start_date` apabila memiliki nilai.
-- License dengan `billing_cycle = LIFETIME` tidak wajib memiliki `end_date`.
-- `status` hanya boleh menggunakan nilai yang telah ditentukan.
-- `ai_mode` hanya boleh menggunakan nilai yang telah ditentukan.
-- Hanya satu License `ACTIVE` yang dapat berlaku untuk setiap User pada waktu yang sama.
-- Soft Delete menggunakan kolom `deleted_at`.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Users | Many to One | License dimiliki oleh satu User |
-| Subscription Plans | Many to One | License menggunakan satu Subscription Plan |
-| Feature Flags | Konseptual | Menentukan fitur yang tersedia berdasarkan hak akses License |
-| Trading Accounts | Konseptual | License membatasi jumlah Trading Account |
-| Plugin Installations | Konseptual | License membatasi jumlah Plugin yang dapat digunakan |
-| Workflows | Konseptual | License membatasi jumlah Workflow yang dapat digunakan |
-| Audit Logs | One to Many | Aktivitas dan perubahan License dapat dicatat pada Audit Log |
-
-### Catatan
-
-- Satu User dapat memiliki banyak riwayat License.
-- Hanya satu License `ACTIVE` yang dapat berlaku untuk satu User pada waktu yang sama.
-- License selalu mengacu pada satu Subscription Plan.
-- `license_code` harus unik.
-- Nilai `max_accounts`, `max_plugins`, `max_workflows`, dan `ai_mode` menjadi snapshot hak akses License pada saat diterbitkan.
-- Perubahan Subscription Plan tidak boleh mengubah hak akses License yang telah diterbitkan secara historis.
-- Mode AI terdiri dari:
-  - `BYOK` — Bring Your Own Key.
-  - `OHTATS` — menggunakan layanan AI yang disediakan OHTATS.
-  - `HYBRID` — kombinasi BYOK dan layanan AI OHTATS.
-- Pembatasan fitur dapat menggunakan kombinasi License dan Feature Flags.
-- Credential, API Key, Token, Secret, dan data sensitif tidak disimpan pada tabel License.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `UNIQUE(license_code)`
-- `INDEX(user_id)`
-- `INDEX(subscription_plan_id)`
-- `INDEX(status)`
-- `INDEX(start_date)`
-- `INDEX(end_date)`
-
-### Future Development
-
-- License Management Dashboard
-- License Renewal Automation
-- License Activation Service
-- License Validation API
-- Feature Entitlement Engine
-- License Upgrade and Downgrade
-- License Transfer
-- License Expiration Notification
-
-## 6.23 Tabel Subscription Plans
-
-### Tujuan
-
-Menyimpan daftar paket langganan yang tersedia pada platform OHTATS.
-
-Subscription Plans menjadi master data untuk:
-
-- Menentukan paket layanan yang tersedia.
-- Menentukan harga dan mata uang.
-- Menentukan siklus penagihan.
-- Menentukan batas penggunaan sumber daya.
-- Menentukan mode penggunaan AI.
-- Menjadi dasar penerbitan License.
-- Mendukung penambahan dan pengelolaan paket baru tanpa mengubah struktur database.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| plan_code | VARCHAR(50) | Kode unik paket |
-| plan_name | VARCHAR(100) | Nama paket |
-| description | TEXT | Deskripsi paket (nullable) |
-| billing_cycle | ENUM(WEEKLY,MONTHLY,YEARLY,LIFETIME) | Siklus penagihan default |
-| price | DECIMAL(18,2) | Harga paket |
-| currency | VARCHAR(10) | Mata uang |
-| max_accounts | INTEGER | Maksimum Trading Account |
-| max_plugins | INTEGER | Maksimum Plugin |
-| max_workflows | INTEGER | Maksimum Workflow |
-| ai_mode | ENUM(BYOK,OHTATS,HYBRID) | Mode AI yang didukung |
-| is_active | BOOLEAN | Status paket |
-| created_at | DATETIME | Waktu dibuat |
-| updated_at | DATETIME | Waktu diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
-### Constraint
-
-- Primary Key: `id`.
-- `plan_code` harus unik.
-- `price` tidak boleh bernilai negatif.
-- `max_accounts` tidak boleh bernilai negatif.
-- `max_plugins` tidak boleh bernilai negatif.
-- `max_workflows` tidak boleh bernilai negatif.
-- `billing_cycle` hanya boleh menggunakan nilai yang telah ditentukan.
-- `ai_mode` hanya boleh menggunakan nilai yang telah ditentukan.
-- Soft Delete menggunakan kolom `deleted_at`.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Licenses | One to Many | Satu Subscription Plan dapat digunakan oleh banyak License |
-| Feature Flags | Konseptual | Paket dapat menentukan fitur yang tersedia |
-| Audit Logs | One to Many | Perubahan Subscription Plan dicatat dalam Audit Log |
-
-### Catatan
-
-- Subscription Plans merupakan master data paket layanan OHTATS.
-- `plan_code` digunakan sebagai identitas unik paket.
-- Perubahan harga atau konfigurasi paket tidak boleh mengubah histori License yang telah diterbitkan.
-- Nilai entitlement pada License menjadi snapshot hak akses pada saat License diterbitkan.
-- Paket dapat dinonaktifkan menggunakan `is_active = FALSE` tanpa menghapus histori paket.
-- Paket yang tidak aktif tidak boleh digunakan untuk penerbitan License baru.
-- `billing_cycle` menentukan siklus penagihan default paket.
-- `ai_mode` menentukan mode AI yang didukung oleh paket.
-- Credential, API Key, Token, Password, dan Secret tidak disimpan pada tabel Subscription Plans.
-- Perubahan penting pada Subscription Plan wajib dicatat pada Audit Log.
-- Soft Delete digunakan untuk mempertahankan histori data paket.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `UNIQUE(plan_code)`
-- `INDEX(plan_name)`
-- `INDEX(billing_cycle)`
-- `INDEX(is_active)`
-- `INDEX(created_at)`
-
-### Future Development
-
-- Plan Versioning
-- Promotional Pricing
-- Discount Management
-- Coupon Integration
-- Regional Pricing
-- Currency Management
-- Feature Entitlement Mapping
-- Usage-based Pricing
-- Upgrade / Downgrade Management
-- Subscription Comparison
-
-## 6.24 Tabel Backup Metadata
-
-### Tujuan
-
-Menyimpan metadata seluruh proses backup yang dilakukan oleh platform OHTATS.
-
-Backup Metadata digunakan untuk:
-
-- Mencatat riwayat proses backup.
-- Mendukung proses restore.
-- Memantau status backup.
-- Memverifikasi integritas file backup.
-- Mengetahui lokasi penyimpanan backup.
-- Mendukung audit dan troubleshooting.
-- Mendukung pengelolaan backup lokal maupun cloud.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| backup_name | VARCHAR(200) | Nama backup |
-| backup_type | ENUM(FULL,INCREMENTAL,DIFFERENTIAL) | Jenis backup |
-| storage_provider | ENUM(LOCAL,S3,GOOGLE_DRIVE,ONEDRIVE,DROPBOX,FTP,OTHER) | Penyedia penyimpanan |
-| storage_region | VARCHAR(100) | Region penyimpanan (nullable) |
-| storage_path | VARCHAR(500) | Lokasi file backup |
-| file_size | BIGINT | Ukuran file dalam byte |
-| checksum | VARCHAR(128) | Hash untuk verifikasi integritas |
-| checksum_algorithm | VARCHAR(20) | Algoritma checksum |
-| encryption_type | VARCHAR(50) | Metode enkripsi backup |
-| backup_status | ENUM(PENDING,RUNNING,SUCCESS,FAILED,CANCELLED) | Status proses backup |
-| started_at | DATETIME | Waktu mulai backup |
-| completed_at | DATETIME | Waktu backup selesai (nullable) |
-| created_by | UUID | User/Admin yang membuat backup (nullable) |
-| created_at | DATETIME | Waktu metadata dibuat |
-| deleted_at | DATETIME | Soft Delete |
-
-### Constraint
-
-- Primary Key: `id`.
-- Foreign Key: `created_by → users.id` (nullable).
-- `backup_type` hanya boleh menggunakan nilai yang telah ditentukan.
-- `storage_provider` hanya boleh menggunakan nilai yang telah ditentukan.
-- `backup_status` hanya boleh menggunakan nilai yang telah ditentukan.
-- `file_size` tidak boleh bernilai negatif.
-- `checksum` wajib tersedia apabila `backup_status = SUCCESS`.
-- `completed_at` wajib tersedia apabila `backup_status = SUCCESS`.
-- `completed_at` tidak boleh lebih awal daripada `started_at`.
-- Soft Delete menggunakan kolom `deleted_at`.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Users | Many to One | Backup dapat dibuat oleh User atau Administrator |
-| Job Queue | Konseptual | Backup dapat diproses melalui Job Queue |
-| Audit Logs | One to Many | Aktivitas Backup dicatat dalam Audit Log |
-| External Integrations | Konseptual | Backup dapat menggunakan penyimpanan eksternal |
-
-### Catatan
-
-- File backup tidak disimpan langsung di dalam database.
-- Database hanya menyimpan metadata backup.
-- `storage_path` menyimpan lokasi atau identifier file backup.
-- `checksum` digunakan untuk memverifikasi integritas file backup.
-- `checksum_algorithm` menentukan algoritma yang digunakan untuk menghasilkan checksum.
-- Backup dapat disimpan pada penyimpanan lokal maupun cloud.
-- Backup yang sedang berjalan memiliki status `RUNNING`.
-- Backup yang berhasil memiliki status `SUCCESS`.
-- Backup yang gagal memiliki status `FAILED`.
-- Backup yang dibatalkan memiliki status `CANCELLED`.
-- `completed_at` hanya diisi setelah proses backup selesai.
-- Metadata backup tetap disimpan untuk kebutuhan audit dan histori.
-- File backup yang telah dihapus dari storage harus dapat ditandai atau dideteksi oleh sistem pada proses monitoring dan restore.
-- Credential, API Key, Token, Password, dan Secret penyimpanan tidak boleh disimpan pada tabel ini.
-- Soft Delete digunakan untuk mempertahankan histori metadata backup.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `INDEX(backup_type)`
-- `INDEX(storage_provider)`
-- `INDEX(backup_status)`
-- `INDEX(created_by)`
-- `INDEX(started_at)`
-- `INDEX(completed_at)`
-- `INDEX(created_at)`
-
-### Future Development
-
-- Automated Backup Scheduler
-- Backup Retention Policy
-- Backup Rotation
-- Remote Backup Monitoring
-- Backup Integrity Verification
-- Restore Verification
-- Point-in-Time Recovery
-- Encrypted Backup
-- Backup Compression
-- Multi-Storage Replication
-- Disaster Recovery
-- Backup Health Monitoring
-
-## 6.25 Tabel Job Queue
-
-### Tujuan
-
-Menyimpan seluruh pekerjaan (Job) yang diproses secara asynchronous oleh platform OHTATS.
-
-Job Queue digunakan untuk:
-
-- Menjalankan proses background.
-- Memisahkan proses berat dari request pengguna.
-- Mendukung Scheduler dan Background Worker.
-- Menjalankan Workflow secara asynchronous.
-- Menjalankan proses AI dan analisis.
-- Menjalankan proses Backup dan Maintenance.
-- Mendukung mekanisme retry.
-- Mendukung monitoring dan troubleshooting proses asynchronous.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| job_name | VARCHAR(150) | Nama Job |
-| job_type | VARCHAR(100) | Jenis Job |
-| queue_name | VARCHAR(100) | Nama antrean |
-| payload | JSON | Data yang diproses |
-| priority | ENUM(LOW,NORMAL,HIGH,CRITICAL) | Prioritas Job |
-| status | ENUM(PENDING,QUEUED,RUNNING,COMPLETED,FAILED,RETRY,CANCELLED) | Status Job |
-| retry_count | INTEGER | Jumlah percobaan |
-| max_retry | INTEGER | Batas maksimum retry |
-| scheduled_at | DATETIME | Waktu Job dijadwalkan (nullable) |
-| started_at | DATETIME | Waktu Job mulai diproses (nullable) |
-| completed_at | DATETIME | Waktu Job selesai diproses (nullable) |
-| worker_name | VARCHAR(100) | Nama Worker yang memproses (nullable) |
-| error_message | TEXT | Pesan kesalahan (nullable) |
-| created_at | DATETIME | Waktu Job dibuat |
-| updated_at | DATETIME | Waktu Job diperbarui |
-| deleted_at | DATETIME | Soft Delete |
-
-### Constraint
-
-- Primary Key: `id`.
-- `priority` hanya boleh menggunakan nilai yang telah ditentukan.
-- `status` hanya boleh menggunakan nilai yang telah ditentukan.
-- `retry_count` tidak boleh bernilai negatif.
-- `max_retry` tidak boleh bernilai negatif.
-- `retry_count` tidak boleh melebihi `max_retry`.
-- `completed_at` tidak boleh lebih awal daripada `started_at`.
-- `scheduled_at` bersifat nullable untuk Job yang harus segera diproses.
-- Soft Delete menggunakan kolom `deleted_at`.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Workflow Executions | Konseptual | Job dapat menjalankan Workflow Execution |
-| Notifications | Konseptual | Job dapat menghasilkan Notification |
-| Backup Metadata | Konseptual | Job dapat menjalankan proses Backup |
-| AI Analysis | Konseptual | Job dapat menjalankan proses AI Analysis |
-| Audit Logs | One to Many | Aktivitas Job dicatat dalam Audit Log |
-
-### Catatan
-
-- Job Queue digunakan untuk proses yang tidak harus diselesaikan langsung dalam request pengguna.
-- `queue_name` digunakan untuk memisahkan jenis pekerjaan berdasarkan kebutuhan Worker.
-- `priority` menentukan tingkat prioritas pemrosesan Job.
-- `status = PENDING` menunjukkan Job telah dibuat tetapi belum masuk antrean pemrosesan.
-- `status = QUEUED` menunjukkan Job telah masuk antrean dan menunggu Worker.
-- `status = RUNNING` menunjukkan Job sedang diproses oleh Worker.
-- `status = COMPLETED` menunjukkan Job berhasil diselesaikan.
-- `status = FAILED` menunjukkan Job gagal setelah proses atau setelah batas retry tercapai.
-- `status = RETRY` menunjukkan Job dijadwalkan untuk dicoba kembali.
-- `status = CANCELLED` menunjukkan Job dibatalkan sebelum selesai.
-- `retry_count` digunakan untuk mencatat jumlah percobaan pemrosesan.
-- `max_retry` menentukan batas maksimum percobaan ulang.
-- `worker_name` digunakan untuk mengetahui Worker yang memproses Job.
-- `payload` menyimpan parameter pekerjaan dalam format JSON.
-- Payload tidak boleh menyimpan credential, password, API Key, Token, atau Secret secara plaintext.
-- Riwayat Job tetap disimpan sebagai dasar audit, monitoring, troubleshooting, dan analisis performa.
-- Job yang bersifat kritis harus memiliki mekanisme retry dan failure handling yang sesuai.
-- Soft Delete digunakan untuk mempertahankan histori Job tanpa menghapus record secara permanen.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `INDEX(queue_name)`
-- `INDEX(status)`
-- `INDEX(priority)`
-- `INDEX(scheduled_at)`
-- `INDEX(worker_name)`
-- `INDEX(created_at)`
-- `INDEX(status, priority, scheduled_at)`
-
-### Future Development
-
-- Distributed Job Queue
-- Priority Scheduling
-- Dead Letter Queue
-- Exponential Backoff
-- Automatic Retry
-- Worker Health Monitoring
-- Queue Monitoring Dashboard
-- Job Cancellation
-- Job Timeout
-- Job Dependency
-- Scheduled Jobs
-- Job Deduplication
-- Distributed Worker
-- Execution Replay
-
-## 6.26 Tabel API Usage
-
-### Tujuan
-
-Mencatat seluruh aktivitas penggunaan API pada platform OHTATS.
-
-API Usage digunakan untuk:
-
-- Memantau konsumsi API.
-- Mengelola penggunaan dan Rate Limit.
-- Mengukur performa API.
-- Mencatat keberhasilan dan kegagalan request.
-- Mengukur penggunaan Token pada layanan yang mendukung Token.
-- Mengestimasi biaya penggunaan layanan AI maupun layanan eksternal.
-- Mendukung audit dan troubleshooting.
-- Mendukung optimasi penggunaan API.
-
-### Struktur Tabel
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | UUID | Primary Key |
-| user_id | UUID | Relasi ke Users (nullable) |
-| account_id | UUID | Relasi ke Trading Accounts (nullable) |
-| provider_id | UUID | Relasi ke AI Providers / External Providers (nullable) |
-| integration_id | UUID | Relasi ke External Integrations (nullable) |
-| api_name | VARCHAR(150) | Nama API |
-| endpoint | VARCHAR(255) | Endpoint yang dipanggil |
-| request_type | ENUM(GET,POST,PUT,PATCH,DELETE) | Jenis HTTP Request |
-| request_count | INTEGER | Jumlah request |
-| input_tokens | INTEGER | Jumlah Token Input (nullable) |
-| output_tokens | INTEGER | Jumlah Token Output (nullable) |
-| estimated_cost | DECIMAL(18,8) | Estimasi biaya penggunaan |
-| response_time_ms | INTEGER | Waktu respons dalam milidetik |
-| rate_limit_status | ENUM(NORMAL,WARNING,LIMITED,BLOCKED) | Status Rate Limit |
-| request_status | ENUM(SUCCESS,FAILED,TIMEOUT) | Status Request |
-| error_message | TEXT | Pesan kesalahan (nullable) |
-| created_at | DATETIME | Waktu aktivitas API |
-
-### Constraint
-
-- Primary Key: `id`.
-- Foreign Key: `user_id → users.id` (nullable).
-- Foreign Key: `account_id → trading_accounts.id` (nullable).
-- Foreign Key: `provider_id → ai_providers.id` (nullable).
-- Foreign Key: `integration_id → external_integrations.id` (nullable).
-- `request_count` tidak boleh bernilai negatif.
-- `input_tokens` tidak boleh bernilai negatif apabila digunakan.
-- `output_tokens` tidak boleh bernilai negatif apabila digunakan.
-- `estimated_cost` tidak boleh bernilai negatif.
-- `response_time_ms` tidak boleh bernilai negatif.
-- `request_type` hanya boleh menggunakan nilai HTTP Method yang telah ditentukan.
-- `rate_limit_status` hanya boleh menggunakan nilai yang telah ditentukan.
-- `request_status` hanya boleh menggunakan nilai yang telah ditentukan.
-- Data credential, API Key, Token, Password, dan Secret tidak boleh disimpan pada tabel ini.
-
-### Relasi
-
-| Tabel | Jenis Relasi | Keterangan |
-|---|---|---|
-| Users | Many to One | Penggunaan API dapat dilakukan oleh User |
-| Trading Accounts | Many to One | Penggunaan API dapat terkait dengan Trading Account |
-| AI Providers | Many to One | API dapat menggunakan AI Provider |
-| External Integrations | Many to One | Aktivitas API dapat berasal dari External Integration |
-| Audit Logs | One to Many | Aktivitas API dapat dicatat pada Audit Log |
-
-### Catatan
-
-- Tidak semua Provider menggunakan sistem Token.
-- `input_tokens` dan `output_tokens` bersifat nullable karena tidak semua API menyediakan informasi Token.
-- `estimated_cost` dihitung berdasarkan tarif Provider yang digunakan apabila informasi tarif tersedia.
-- Tidak semua API memiliki biaya penggunaan.
-- `request_count` dapat merepresentasikan satu request maupun agregasi beberapa request sesuai implementasi sistem.
-- Untuk kebutuhan monitoring detail, satu record dapat mewakili satu aktivitas API.
-- Untuk kebutuhan agregasi, implementasi dapat mengelompokkan aktivitas berdasarkan Provider, API, User, Account, atau periode waktu.
-- `response_time_ms` digunakan untuk mengukur performa API.
-- `rate_limit_status` digunakan untuk memantau kondisi penggunaan terhadap batas API.
-- `request_status` digunakan untuk membedakan request berhasil, gagal, atau timeout.
-- `error_message` dapat digunakan untuk troubleshooting, tetapi tidak boleh mengandung credential atau Secret.
-- API Usage dapat digunakan sebagai dasar monitoring biaya operasional layanan AI dan eksternal.
-- Data API Usage dapat digunakan bersama Audit Logs untuk investigasi aktivitas API.
-- Data API Usage bersifat historis dan tidak boleh digunakan sebagai tempat penyimpanan credential.
-
-### Index yang Disarankan
-
-- `PK(id)`
-- `INDEX(user_id)`
-- `INDEX(account_id)`
-- `INDEX(provider_id)`
-- `INDEX(integration_id)`
-- `INDEX(api_name)`
-- `INDEX(rate_limit_status)`
-- `INDEX(request_status)`
-- `INDEX(created_at)`
-- `INDEX(provider_id, created_at)`
-- `INDEX(user_id, created_at)`
-
-### Future Development
-
-- API Usage Dashboard
-- Provider Cost Analytics
-- Token Usage Analytics
-- Rate Limit Monitoring
-- Automatic Cost Alert
-- Usage Quota Management
-- Provider Usage Comparison
-- API Performance Analytics
-- Usage Forecasting
-- Cost Optimization
-- Billing Integration
-- API Usage Export
-- Anomaly Detection
+# END OF DATABASE_DESIGN.md
