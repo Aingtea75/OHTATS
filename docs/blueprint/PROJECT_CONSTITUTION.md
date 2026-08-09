@@ -1,20 +1,16 @@
 # OHTATS Project Constitution
 
-> Dokumen ini menjadi aturan dasar (konstitusi) dalam perancangan, pengembangan, pengujian, dan pemeliharaan platform OH-TRADER AI Trading System (OHTATS).
+> Dokumen ini menjadi aturan dasar dalam perancangan, pengembangan, pengujian, review, dan pemeliharaan platform OHTATS (Om Hend Trader AI Trading System).
 
 ---
 
 # 1. Tujuan
 
-Project Constitution dibuat untuk memastikan seluruh pengembangan OHTATS memiliki standar yang sama, terstruktur, terdokumentasi, dan mudah dikembangkan dalam jangka panjang.
-
-Seluruh pengembang yang terlibat dalam proyek wajib mengikuti aturan yang tertulis pada dokumen ini.
+Project Constitution memastikan seluruh pengembangan OHTATS memiliki aturan yang sama, terstruktur, terdokumentasi, dapat diaudit, dan dapat dikembangkan dalam jangka panjang.
 
 ---
 
 # 2. Prinsip Utama
-
-OHTATS dibangun berdasarkan prinsip berikut:
 
 - Documentation First
 - Blueprint Before Coding
@@ -24,106 +20,139 @@ OHTATS dibangun berdasarkan prinsip berikut:
 - Security by Design
 - API First
 - Plugin Based
-- High Performance
+- Risk First
+- Auditability
 - Maintainability
+- Reproducibility
 
 ---
 
 # 3. Filosofi Pengembangan
 
-Sebelum menulis kode, setiap fitur wajib memiliki blueprint yang jelas.
+Sebelum implementasi fitur besar, requirement dan blueprint harus tersedia.
 
-Tidak ada implementasi tanpa perencanaan.
+Urutan default:
 
-Blueprint menjadi sumber referensi utama dalam seluruh proses pengembangan.
+```text
+Vision
+  ↓
+Platform Principles
+  ↓
+System Design
+  ↓
+Architecture
+  ↓
+Module Specification
+  ↓
+Data / API / Integration Design
+  ↓
+Implementation
+  ↓
+Testing
+  ↓
+Release
+```
 
----
-
-# 4. Status Dokumen
-
-Status dokumen blueprint dapat berupa:
-
-- Draft
-- Review
-- Approved
-- Deprecated
-
----
-
-# 5. Standar Arsitektur
-
-Seluruh sistem OHTATS wajib mengikuti arsitektur modular.
-
-Setiap modul harus memiliki tanggung jawab yang jelas dan tidak saling bergantung secara langsung.
-
-Komunikasi antar modul harus dilakukan melalui antarmuka (interface), service, atau API yang telah ditentukan.
-
-Tidak diperbolehkan membuat ketergantungan yang menyebabkan perubahan pada satu modul merusak modul lainnya.
+Pengecualian terhadap urutan harus memiliki alasan yang terdokumentasi.
 
 ---
 
-# 6. Standar Dokumentasi
+# 4. Source of Truth
 
-Seluruh fitur wajib memiliki dokumentasi.
+Repository Git adalah sumber kebenaran proyek.
 
-Minimal setiap fitur harus memiliki:
-
-- Tujuan
-- Fungsi
-- Cara Kerja
-- Diagram (jika diperlukan)
-- Konfigurasi
-- Dependensi
-- Catatan Pengembangan
-
-Dokumentasi harus diperbarui setiap kali terdapat perubahan besar.
+Dokumen atau keputusan yang hanya berada di percakapan, catatan lokal, atau AI session tidak dianggap sebagai baseline proyek sampai tercatat di repository melalui commit/PR yang sesuai.
 
 ---
 
-# 7. Standar Penamaan
+# 5. Status Dokumen
 
-Nama folder, file, modul, class, function, dan variabel harus konsisten.
+Status blueprint resmi:
 
-Gunakan nama yang jelas, mudah dipahami, dan menggambarkan fungsinya.
+- `DRAFT` — pekerjaan awal.
+- `REVIEW` — sedang diverifikasi.
+- `APPROVED` — memenuhi acceptance criteria dan disetujui.
+- `LOCKED` — baseline yang tidak boleh diubah tanpa review/decision baru.
+- `DEPRECATED` — tidak lagi menjadi sumber aktif.
 
-Hindari singkatan yang tidak umum.
-
-Standar penamaan akan dijelaskan lebih rinci pada dokumen Coding Standard di masa mendatang.
-
----
-
-# 8. Standar Konfigurasi
-
-Seluruh konfigurasi sistem harus dipisahkan dari source code.
-
-Konfigurasi disimpan pada folder `config/` menggunakan format yang telah ditentukan oleh proyek.
-
-Tidak diperbolehkan menuliskan informasi konfigurasi secara langsung (hardcode) di dalam program, kecuali untuk nilai konstan yang memang menjadi bagian dari logika sistem.
-
-Seluruh perubahan konfigurasi harus dapat dilakukan tanpa mengubah source code.
+Status harus ditulis pada dokumen atau metadata governance yang sesuai.
 
 ---
 
-# 9. Standar Keamanan
+# 6. Change Control
 
-Keamanan merupakan bagian dari desain sistem sejak awal (Security by Design).
+Perubahan terhadap dokumen `APPROVED` atau `LOCKED` harus:
 
-Prinsip yang harus diterapkan:
-
-- Least Privilege (hak akses minimum)
-- Authentication untuk akses sistem
-- Authorization berdasarkan peran (Role)
-- Audit Log untuk aktivitas penting
-- Enkripsi data sensitif
-- Backup dan Restore
+1. memiliki alasan perubahan;
+2. diperiksa dampaknya terhadap dokumen terkait;
+3. melalui review;
+4. dicatat dalam commit dan, bila relevan, ADR/PR;
+5. tidak menghapus historical rationale tanpa alasan governance.
 
 ---
 
-# 10. Standar Pengujian
+# 7. Standar Arsitektur
 
-Setiap modul harus dapat diuji secara mandiri.
+Seluruh sistem mengikuti modular architecture dengan boundary yang jelas.
 
-Jenis pengujian yang akan digunakan antara lain:
+Komunikasi antar modul dilakukan melalui interface, service, command, event, atau API contract yang terdokumentasi.
+
+Circular dependency dan bypass terhadap security, risk, trading, atau audit controls dilarang.
+
+---
+
+# 8. Standar Dokumentasi
+
+Fitur besar minimal memiliki:
+
+- tujuan;
+- fungsi;
+- boundary;
+- cara kerja;
+- dependency;
+- konfigurasi;
+- acceptance criteria;
+- testing scope;
+- dan catatan perubahan bila diperlukan.
+
+Dokumentasi diperbarui ketika terdapat perubahan arsitektur atau behavior yang material.
+
+---
+
+# 9. Standar Penamaan
+
+Nama folder, file, modul, class, function, dan variable harus jelas, konsisten, dan menggambarkan tanggung jawabnya.
+
+---
+
+# 10. Standar Konfigurasi
+
+Konfigurasi dipisahkan dari source code.
+
+Secret dan credential tidak boleh di-hardcode atau disimpan plaintext pada business tables.
+
+---
+
+# 11. Standar Keamanan
+
+Security by Design wajib diterapkan melalui:
+
+- least privilege;
+- authentication;
+- authorization;
+- capability control;
+- secret protection;
+- audit logging;
+- encryption sesuai kebutuhan;
+- backup dan recovery.
+
+---
+
+# 12. Standar Pengujian
+
+Modul harus dapat diuji secara mandiri sesuai jenisnya.
+
+Jenis pengujian dapat mencakup:
 
 - Unit Test
 - Integration Test
@@ -132,108 +161,90 @@ Jenis pengujian yang akan digunakan antara lain:
 - Backtest
 - Forward Test
 - Paper Trading
+- Security Test
 
-Tidak ada modul yang dinyatakan selesai sebelum melalui proses pengujian yang sesuai.
-
----
-
-# 11. Standar Pengembangan AI
-
-OHTATS dirancang sebagai platform AI Provider Agnostic.
-
-Sistem tidak boleh bergantung pada satu penyedia AI tertentu.
-
-Seluruh integrasi AI harus menggunakan AI Manager sehingga penambahan atau penggantian AI Provider tidak memerlukan perubahan pada modul inti.
-
-AI Provider yang direncanakan meliputi:
-
-- OpenAI
-- Google Gemini
-- Anthropic Claude
-- xAI Grok
-- DeepSeek
-- OpenRouter
-- Ollama
-- LM Studio
-- Custom API
-
-Seluruh AI Provider bersifat opsional dan dapat diaktifkan atau dinonaktifkan melalui konfigurasi.
+Tidak ada fitur yang dianggap siap hanya karena kode telah dibuat.
 
 ---
 
-# 12. Standar Integrasi Platform Trading
+# 13. Standar AI
 
-OHTATS harus mendukung berbagai platform trading melalui sistem Connector.
+OHTATS AI Provider Agnostic.
 
-Platform yang direncanakan meliputi:
+Provider seperti OpenAI, Gemini, Claude, Grok, DeepSeek, OpenRouter, Ollama, LM Studio, dan custom API dapat diintegrasikan melalui provider abstraction.
 
-- MetaTrader 4 (MT4)
-- MetaTrader 5 (MT5)
+AI tidak boleh memperoleh jalur langsung ke broker command dan tidak boleh melewati policy, authorization, validation, risk, trading, atau audit controls.
+
+---
+
+# 14. Standar Integrasi Trading
+
+Trading platform diintegrasikan melalui connector/adapter boundary.
+
+Target meliputi:
+
+- MT4
+- MT5
 - TradingView
-- Broker REST API
-- FIX API
+- Broker REST/API
+- FIX/API
 - Crypto Exchange API
 
-Setiap Connector dikembangkan sebagai modul terpisah sehingga tidak memengaruhi modul lain.
+Connector harus dapat berkembang tanpa menjadikan vendor-specific model sebagai canonical core model.
 
 ---
 
-# 13. Standar Plugin
+# 15. Standar Plugin
 
-Seluruh fitur tambahan harus dikembangkan sebagai Plugin apabila memungkinkan.
+Plugin harus memiliki lifecycle, compatibility, configuration, documentation, dan capability boundary.
 
-Plugin harus dapat:
-
-- Dipasang tanpa mengubah Core System.
-- Diperbarui secara mandiri.
-- Dinonaktifkan tanpa memengaruhi sistem utama.
-- Memiliki dokumentasi sendiri.
-- Memiliki konfigurasi sendiri.
+Plugin tidak boleh memperoleh privilege di luar capability yang diberikan.
 
 ---
 
-# 14. Standar Version Control
+# 16. Standar Git Workflow
 
-Seluruh source code OHTATS wajib dikelola menggunakan Git.
+Branch default repository saat ini adalah `master`.
 
-Setiap perubahan harus memiliki riwayat yang jelas sehingga mudah ditelusuri, ditinjau, dan dikembalikan apabila diperlukan.
+Perubahan pekerjaan dilakukan melalui branch kerja, misalnya:
 
-Branch utama yang digunakan:
+```text
+master
+  ├── work/*
+  ├── feature/*
+  ├── hotfix/*
+  └── release/*
+```
 
-- main
-- develop
-- feature/*
-- hotfix/*
-- release/*
-
----
-
-# 15. Standar Audit
-
-Seluruh aktivitas penting harus dapat diaudit.
-
-Audit meliputi:
-
-- Login
-- Logout
-- Perubahan Konfigurasi
-- Aktivasi AI
-- Eksekusi Trading
-- Backtest
-- Copy Trading
-- Deployment
-- Error System
-
-Audit Log harus disimpan sehingga dapat digunakan untuk proses analisis maupun investigasi.
+Perubahan besar tidak langsung dianggap baseline hanya karena sudah di-push ke branch kerja. Baseline masuk `master` setelah review dan acceptance criteria terpenuhi.
 
 ---
 
-# 16. Penutup
+# 17. Standar Audit
 
-Project Constitution merupakan dokumen dasar yang menjadi acuan seluruh proses pengembangan OHTATS.
+Aktivitas penting harus dapat ditelusuri, termasuk:
 
-Setiap perubahan terhadap dokumen ini harus melalui proses review sebelum diterapkan.
+- authentication;
+- configuration changes;
+- strategy publication/deployment;
+- risk changes;
+- trading actions;
+- backtest;
+- copy trading;
+- AI decisions yang relevan;
+- licensing changes;
+- deployment;
+- administrative actions;
+- security events.
 
-Seluruh blueprint berikutnya harus mengikuti prinsip-prinsip yang telah ditetapkan pada dokumen ini.
+---
 
-Perubahan pada dokumen harus dicatat dan ditinjau sebelum diterapkan.
+# 18. Penutup
+
+Project Constitution merupakan aturan dasar OHTATS. Blueprint turunan harus konsisten terhadap constitution, vision, dan keputusan arsitektur yang telah disetujui.
+
+Perubahan terhadap constitution harus melalui review dan dicatat dalam repository.
+
+---
+
+# END OF PROJECT_CONSTITUTION.md
