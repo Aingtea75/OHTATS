@@ -8,7 +8,7 @@
 
 **WORKFLOW ENGINE BASELINE — REVIEW**
 
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Authority:** Workflow domain reference
 
@@ -29,20 +29,21 @@ Workflow Engine adalah **orchestrator**, bukan pengganti AI Manager, Risk Manage
 Workflow Engine harus mengikuti prinsip berikut:
 
 1. **Single orchestration responsibility** — workflow mengatur proses, bukan memiliki master state domain lain.
-2. **Explicit definition** — workflow harus mempunyai definition dan version yang dapat diidentifikasi.
-3. **Immutable published version** — version workflow yang sudah dipublikasikan tidak boleh diubah secara in-place.
-4. **Deterministic execution state** — setiap execution mempunyai state yang dapat diaudit.
+2. **Explicit definition** — workflow mempunyai definition dan version yang dapat diidentifikasi.
+3. **Immutable published version** — published version tidak boleh diubah in-place.
+4. **Deterministic execution state** — setiap execution mempunyai state yang dapat ditelusuri.
 5. **Idempotent execution** — retry tidak boleh menghasilkan duplicate side effect yang tidak diinginkan.
 6. **Controlled transitions** — perpindahan state hanya melalui transition yang valid.
-7. **Risk-first** — workflow tidak boleh melewati Risk Manager untuk executable trading action.
-8. **Canonical trading path** — workflow tidak boleh mengirim broker command secara langsung.
+7. **Risk-first** — executable trading action tidak boleh melewati Risk Manager.
+8. **Canonical trading path** — workflow tidak mengirim broker command secara langsung.
 9. **Provider agnostic** — workflow tidak bergantung langsung pada vendor AI, broker, exchange, atau platform tertentu.
-10. **Event-driven but bounded** — event dapat memicu workflow, tetapi event bukan jalur eksekusi alternatif yang melewati domain authority.
-11. **Tenant isolation** — workflow execution tidak boleh mencampur ownership atau state tenant/account yang berbeda.
+10. **Event-driven but bounded** — event dapat memicu workflow, tetapi bukan jalur bypass domain authority.
+11. **Tenant isolation** — execution tidak boleh mencampur ownership tenant/account.
 12. **Auditable** — command, transition, retry, failure, dan terminal result harus dapat ditelusuri.
-13. **Reproducible where required** — workflow version dan input context yang diperlukan untuk operasi kritis harus dapat direkonstruksi.
-14. **Fail closed for authorization** — workflow tidak boleh meneruskan executable action ketika authorization atau required control tidak tersedia.
-15. **No hidden side effects** — setiap external side effect harus berasal dari step yang eksplisit dan memiliki contract.
+13. **Reproducible where required** — workflow version dan input context kritis harus dapat direkonstruksi.
+14. **Fail closed for authorization** — executable action berhenti ketika authorization/control wajib tidak tersedia.
+15. **No hidden side effects** — setiap external side effect berasal dari step eksplisit dengan contract.
+16. **Database alignment** — blueprint tidak boleh mengasumsikan kolom/entity persistence yang belum ditetapkan oleh `DATABASE_DESIGN.md`.
 
 ---
 
@@ -93,11 +94,11 @@ Workflow Engine memiliki authority atas:
 - workflow transition definition;
 - workflow execution state;
 - workflow execution step state;
-- retry state;
-- timeout state;
-- failure handling state;
-- orchestration correlation/idempotency context;
-- workflow execution audit metadata.
+- orchestration control state;
+- correlation/idempotency handling context;
+- workflow execution observability metadata.
+
+Retry, timeout, failure, dan idempotency **adalah orchestration responsibilities**, tetapi persistence detailnya dibatasi oleh schema canonical yang telah ditetapkan `DATABASE_DESIGN.md`.
 
 ## 4.2 Workflow Engine Does Not Own
 
@@ -229,13 +230,13 @@ Transition harus:
 Contoh:
 
 ```text
-RUNNING + step_success  -> RUNNING / COMPLETED
-RUNNING + wait_required -> WAITING
-RUNNING + retryable_error -> RETRYING
-RUNNING + fatal_error -> FAILED
-WAITING + valid_signal -> RUNNING
-RUNNING + cancellation -> CANCELLED
-RUNNING + timeout -> TIMED_OUT
+RUNNING + step_success       -> RUNNING / COMPLETED
+RUNNING + wait_required      -> WAITING
+RUNNING + retryable_error    -> RETRYING
+RUNNING + fatal_error        -> FAILED
+WAITING + valid_signal       -> RUNNING
+RUNNING + cancellation       -> CANCELLED
+RUNNING + timeout            -> TIMED_OUT
 ```
 
 ---
@@ -259,6 +260,8 @@ Trigger harus memiliki:
 - timestamp;
 - authorization context;
 - idempotency key bila diperlukan.
+
+`workflow_executions` menyimpan `trigger_type`, `triggered_by`, dan `correlation_id` sesuai schema canonical. Jika runtime membutuhkan metadata trigger tambahan, metadata tersebut harus berada pada contract/event context yang sah dan tidak boleh diasumsikan sebagai kolom database baru tanpa perubahan resmi pada `DATABASE_DESIGN.md`.
 
 Event trigger tidak boleh otomatis dianggap sebagai izin eksekusi trading.
 
@@ -376,9 +379,9 @@ Step tanpa external side effect dapat diulang dengan aman selama input contract 
 
 Step yang menghasilkan command atau external side effect harus mempunyai idempotency key atau mekanisme deduplication yang setara.
 
-```text
-execution_id + step_id + attempt_context
-```
+Deterministic idempotency context dapat dibentuk dari execution/step/attempt context, tetapi **attempt counter dan idempotency key tidak dianggap persisted database columns** karena schema canonical saat ini belum mendefinisikannya.
+
+Untuk side effect trading, Workflow Engine harus menyerahkan idempotency dan deduplication canonical kepada Trading Engine/Copy Trading Engine/domain owner yang bersangkutan.
 
 Retry tidak boleh menghasilkan duplicate order, duplicate notification yang tidak diinginkan, duplicate copy execution, atau duplicate external command.
 
@@ -391,6 +394,8 @@ Workflow Engine tidak menggantikan idempotency mechanism milik Trading Engine.
 Setiap long-running atau external step harus memiliki timeout policy.
 
 Timeout harus menghasilkan state yang eksplisit dan tidak boleh dianggap sebagai successful completion.
+
+`workflow_executions.status` atau `workflow_execution_steps.status` digunakan sebagai canonical persisted state sesuai lifecycle yang relevan. Timeout policy/configuration berasal dari workflow version/step definition. Tidak diasumsikan adanya dedicated timeout column yang belum ditetapkan database blueprint.
 
 Untuk trading-related step, timeout pada Workflow tidak boleh secara otomatis diasumsikan sebagai broker rejection atau broker success. Status canonical harus diperoleh dari Trading Engine/Connector reconciliation.
 
@@ -428,6 +433,8 @@ Failure
 
 Compensation bukan rollback database lintas domain secara otomatis. Compensation harus menggunakan contract domain yang sah.
 
+Failure evidence yang membutuhkan audit ledger tetap menjadi tanggung jawab Security/Audit Manager sesuai Event System.
+
 ---
 
 # 17. Cancellation
@@ -458,6 +465,8 @@ Concurrency control dapat menggunakan:
 
 Mekanisme konkret implementasi dapat ditentukan pada tahap implementation design tanpa mengubah ownership blueprint.
 
+Concurrency mechanism tidak boleh diasumsikan sebagai schema column baru tanpa perubahan resmi pada database blueprint.
+
 ---
 
 # 19. Persistence Mapping
@@ -472,9 +481,27 @@ workflow_executions
 workflow_execution_steps
 ```
 
-Module tidak otomatis berarti table baru.
+Mapping canonical:
+
+| Workflow concern | Canonical persistence |
+|---|---|
+| workflow definition | `workflows` |
+| immutable version | `workflow_versions` |
+| step definition | `workflow_steps` |
+| execution lifecycle | `workflow_executions.status` + timestamps |
+| execution trigger | `workflow_executions.trigger_type` / `triggered_by` / `correlation_id` |
+| step lifecycle | `workflow_execution_steps.status` + timestamps |
+| step input/output | `workflow_execution_steps.input_payload` / `output_payload` |
+| step failure evidence | `workflow_execution_steps.error_code` plus event/audit contract bila diperlukan |
+| retry policy | workflow version / step configuration |
+| timeout policy | workflow version / step configuration |
+| idempotency handling | runtime/domain contract; tidak mengasumsikan kolom baru |
+
+Module tidak otomatis berarti table.
 
 Workflow Engine tidak boleh membuat duplicate entity untuk trading, risk, AI, market data, backtest, atau copy trading hanya karena workflow membutuhkan reference terhadap entity tersebut.
+
+Jika implementation design membuktikan persistence requirement baru yang tidak dapat dipenuhi oleh schema canonical, perubahan harus diproses sebagai database change-control tersendiri dan tidak boleh disisipkan diam-diam ke implementation.
 
 ---
 
@@ -497,113 +524,126 @@ workflow.cancelled
 workflow.timed_out
 ```
 
-Event harus membawa correlation/causation context yang diperlukan untuk tracing.
+Event harus membawa correlation/causation context yang diperlukan untuk tracing. Event lifecycle mengikuti Event System:
 
-Event publication tidak boleh dianggap sebagai atomic guarantee terhadap external side effect kecuali contract domain menyatakannya demikian.
+```text
+State Change
+   ↓
+Persist State
+   ↓
+Create Event
+   ↓
+Publish / Outbox
+   ↓
+Transport
+   ↓
+Consumer
+   ↓
+Ack / Retry / Dead Letter
+```
+
+Workflow event tidak menjadi source-of-record pengganti `workflow_executions` atau `workflow_execution_steps`.
+
+Consumer workflow harus idempotent dan tidak boleh mengubah historical event.
 
 ---
 
 # 21. Security and Authorization
 
-Workflow execution harus menghormati:
+Workflow execution harus mematuhi:
 
-- authentication;
-- authorization;
 - tenant isolation;
-- role/policy restrictions;
-- secret access policy;
+- role/permission policy;
+- resource ownership;
+- authorization context;
+- secret reference policy;
 - audit requirements.
 
-Workflow tidak boleh menyimpan secret plaintext dalam workflow definition atau execution payload.
+Workflow tidak boleh menyimpan plaintext credentials.
 
-Workflow step yang membutuhkan privileged operation harus meminta domain/service yang mempunyai authority tersebut.
+Workflow tidak boleh menaikkan privilege melalui step transition.
+
+Human approval step hanya memberikan keputusan sesuai authorization scope; human approval juga tidak boleh bypass Risk Manager, Security, atau Trading Engine.
 
 ---
 
-# 22. Observability
+# 22. Observability and Audit
 
 Minimal observability:
 
-- workflow execution id;
-- workflow version;
-- step id;
-- attempt number;
-- correlation id;
-- causation id bila tersedia;
-- start/end timestamp;
-- duration;
+- execution identifier;
+- workflow/version identifier;
+- step identifier;
 - state transition;
+- correlation/causation context;
+- timestamp;
+- duration;
 - error classification;
 - terminal result.
 
-Observability tidak boleh mengubah business truth atau canonical transaction state.
+Audit ledger tetap dimiliki Security/Audit Manager. Workflow hanya menghasilkan evidence/context yang diperlukan dan event yang sesuai.
 
 ---
 
-# 23. Auditability
+# 23. Reconciliation
 
-Operasi kritis harus dapat ditelusuri:
+Untuk external side effect, terutama trading, Workflow tidak boleh menyimpulkan final external state hanya berdasarkan step completion.
 
 ```text
-Trigger
-  ↓
-Workflow Execution
-  ↓
-Step
-  ↓
-Transition
-  ↓
-Domain Service Call
-  ↓
-Domain Result / Event
+Workflow Step
+     ↓
+Domain Command
+     ↓
+External System
+     ↓
+Connector / Trading Engine
+     ↓
+Canonical Result / Reconciliation
+     ↓
+Workflow Continues
 ```
 
-Untuk trading-related workflow, audit chain harus dapat menghubungkan workflow execution dengan trading request dan risk decision tanpa membuat duplicate transaction owner.
+Timeout atau network failure tidak boleh dipetakan secara otomatis menjadi success/failure external tanpa reconciliation yang sesuai.
 
 ---
 
-# 24. Tenant and Account Isolation
+# 24. Change Control
 
-Workflow execution harus mempertahankan context:
+Perubahan Workflow definition setelah published dilakukan melalui workflow version baru.
 
-- tenant;
-- user/actor bila relevan;
-- account context bila relevan;
-- authorization scope;
-- correlation context.
+Perubahan terhadap ownership, persistence contract, trading boundary, risk boundary, event contract, atau security boundary wajib melalui review lintas blueprint terkait.
 
-Workflow tidak boleh menggunakan execution milik tenant/account lain sebagai input tanpa authorization dan contract yang sah.
+Workflow Engine tidak boleh mengubah `DATABASE_DESIGN.md`, `ERD.md`, `ARCHITECTURE.md`, atau `MODULE_SPECIFICATION.md` secara implisit.
 
 ---
 
 # 25. Acceptance Criteria
 
-Workflow Engine baseline dianggap memenuhi requirement apabila:
+Workflow Engine baseline dapat diajukan ke final review hanya jika:
 
-- workflow definition/version mempunyai ownership jelas;
-- published version immutable;
-- execution state eksplisit;
-- transition tervalidasi;
-- retry mempunyai idempotency policy;
-- timeout mempunyai state yang jelas;
-- failure handling terdokumentasi;
-- cancellation terdokumentasi;
-- concurrency control didefinisikan;
-- event integration mempunyai boundary;
-- trading tidak dapat bypass Risk/Trading Engine;
+- ownership workflow jelas;
+- state machine eksplisit;
+- transition rules terdokumentasi;
+- trigger model terdokumentasi;
+- retry/idempotency boundary jelas;
+- timeout boundary jelas;
+- failure/cancellation policy jelas;
+- persistence mapping konsisten dengan database canonical;
+- event integration konsisten dengan Event System;
+- data flow tidak memiliki alternate execution path;
+- trading action tetap melewati Risk Manager dan Trading Engine;
 - AI tidak menjadi privileged execution path;
-- Copy Trading tetap melewati normal risk/trading pipeline;
-- Backtest tetap terisolasi dari live execution;
-- persistence menggunakan entity workflow canonical;
-- tenant/security boundary terdokumentasi;
-- auditability dan observability tersedia;
-- tidak ada duplicate master ownership.
+- Backtest tetap terisolasi;
+- Copy Trading tetap melalui canonical pipeline;
+- tenant/security boundary jelas;
+- audit ownership tidak tumpang tindih;
+- external side effect mempunyai reconciliation contract;
+- tidak ada duplicate canonical entity ownership;
+- implementation requirement baru tidak diasumsikan sebagai schema tanpa change-control.
 
 ---
 
-# 26. Cross-Document Consistency
-
-Workflow Engine harus konsisten dengan:
+# 26. Related Blueprints
 
 - `SYSTEM_DESIGN.md`
 - `ARCHITECTURE.md`
@@ -612,50 +652,9 @@ Workflow Engine harus konsisten dengan:
 - `ERD.md`
 - `EVENT_SYSTEM.md`
 - `DATA_FLOW.md`
-- `TRADING_ENGINE.md`
-- `RISK_MANAGEMENT.md`
-- `BACKTEST_ENGINE.md`
-- `COPY_TRADING.md`
+- `MESSAGE_QUEUE.md`
+- `ERROR_HANDLING.md`
+- `SECURITY.md`
+- `AUDIT_LOG.md` bila tersedia sebagai blueprint terpisah
 
-Jika terjadi konflik ownership, dokumen canonical yang lebih tinggi harus menjadi sumber penyelesaian sesuai governance OHTATS. Workflow Engine tidak boleh memperkenalkan authority baru yang bertentangan dengan domain owner.
-
----
-
-# 27. Finalization Gate
-
-Dokumen ini **belum final** pada saat dibuat.
-
-Status final hanya dapat diberikan setelah:
-
-1. cross-document audit selesai;
-2. database/ERD consistency diverifikasi;
-3. event/data-flow consistency diverifikasi;
-4. trading/risk/backtest/copy boundaries diverifikasi;
-5. security/audit/tenant boundary diverifikasi;
-6. acceptance criteria terpenuhi;
-7. perubahan dilakukan melalui branch kerja;
-8. Pull Request dibuat;
-9. independent review dilakukan oleh reviewer yang berbeda dari pembuat PR;
-10. approval dan merge dilakukan sesuai governance repository.
-
----
-
-# 28. Change Control
-
-Perubahan terhadap workflow blueprint harus dilakukan melalui Pull Request.
-
-Tidak ada perubahan langsung ke `master` sebagai bagian dari workflow finalization.
-
-Setiap perubahan harus menjelaskan:
-
-- alasan perubahan;
-- dokumen yang terdampak;
-- ownership yang terdampak;
-- database/ERD impact;
-- event/data-flow impact;
-- backward compatibility impact;
-- risk/security/audit impact.
-
----
-
-# End of Document
+# END OF WORKFLOW_ENGINE.md
