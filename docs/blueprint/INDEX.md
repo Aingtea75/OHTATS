@@ -1,27 +1,103 @@
 # OHTATS Blueprint Index
 
-> Daftar seluruh dokumen blueprint proyek OHTATS.
+> Daftar canonical dokumen blueprint OHTATS. Repository Git adalah source of truth.
+>
+> Status dokumen harus mengikuti `PROJECT_CONSTITUTION.md`:
+> `DRAFT` → `REVIEW` → `APPROVED` → `LOCKED` → `DEPRECATED`.
+>
+> Index ini mencatat keberadaan dokumen dan status governance yang diketahui. Dokumen berstatus `UNREVIEWED` belum boleh dianggap final.
 
-| No | Dokumen | Status |
-|----|----------|--------|
-| 1 | README.md | ✅ Draft |
-| 2 | VISION.md | ✅ Draft |
-| 3 | PROJECT_CONSTITUTION.md | ✅ Draft |
-| 4 | SYSTEM_DESIGN.md | ✅ Draft |
-| 5 | ARCHITECTURE.md | ✅ Draft |
-| 6 | MODULE_SPECIFICATION.md | ✅ Draft |
-| 7 | CODING_STANDARD.md | 🟡 Draft |
-| 8 | DATABASE_DESIGN.md | ⏳ Belum dibuat |
-| 9 | DATA_FLOW.md | ⏳ Belum dibuat |
-| 10 | API_DESIGN.md | ⏳ Belum dibuat |
-| 11 | AI_PROVIDER.md | ⏳ Belum dibuat |
-| 12 | MULTI_PLATFORM.md | ⏳ Belum dibuat |
-| 13 | PLUGIN_SYSTEM.md | ⏳ Belum dibuat |
-| 14 | BACKTEST_ENGINE.md | ⏳ Belum dibuat |
-| 15 | COPY_TRADING.md | ⏳ Belum dibuat |
-| 16 | TESTING_STRATEGY.md | ⏳ Belum dibuat |
-| 17 | SECURITY.md | ⏳ Belum dibuat |
-| 18 | DEPLOYMENT.md | ⏳ Belum dibuat |
-| 19 | UI_UX.md | ⏳ Belum dibuat |
-| 20 | ROADMAP.md | ⏳ Belum dibuat |
-| 21 | GLOSSARY.md | ⏳ Belum dibuat |
+| No | Dokumen | Status Governance |
+|---:|---|---|
+| 1 | `README.md` | EXISTING / REVIEW |
+| 2 | `01_VISION.md` | APPROVED BASELINE |
+| 3 | `PROJECT_CONSTITUTION.md` | APPROVED BASELINE |
+| 4 | `PLATFORM_PHILOSOPHY.md` | REVIEW |
+| 5 | `PLATFORM_PHILOSOPHY_V1.md` | LEGACY / REVIEW |
+| 6 | `SYSTEM_DESIGN.md` | LOCKED / FINAL |
+| 7 | `ARCHITECTURE.md` | APPROVED BASELINE |
+| 8 | `ARCHITECTURE_DECISIONS.md` | APPROVED |
+| 9 | `MODULE_SPECIFICATION.md` | APPROVED BASELINE |
+| 10 | `ADR-006-STRATEGY-BINDING-BOUNDARY.md` | APPROVED |
+| 11 | `CODING_STANDARD.md` | REVIEW |
+| 12 | `CONFIGURATION_STANDARD.md` | REVIEW |
+| 13 | `DATABASE_DESIGN.md` | LOCKED / FINAL |
+| 14 | `DATABASE_REVIEW.md` | LOCKED / FINAL REVIEW |
+| 15 | `DATABASE_REVIEW_ADDENDUM.md` | APPROVED CLARIFICATION |
+| 16 | `ERD.md` | LOCKED / FINAL |
+| 17 | `DATA_FLOW.md` | UNREVIEWED |
+| 18 | `API_DESIGN.md` | UNREVIEWED |
+| 19 | `EVENT_SYSTEM.md` | UNREVIEWED |
+| 20 | `MESSAGE_QUEUE.md` | UNREVIEWED |
+| 21 | `ERROR_HANDLING.md` | UNREVIEWED |
+| 22 | `INTEGRATION.md` | UNREVIEWED |
+| 23 | `AI_ARCHITECTURE.md` | UNREVIEWED |
+| 24 | `AI_PROVIDER.md` | UNREVIEWED |
+| 25 | `MULTI_PLATFORM.md` | UNREVIEWED |
+| 26 | `PLUGIN_SYSTEM.md` | UNREVIEWED |
+| 27 | `PLUGIN_MARKETPLACE.md` | UNREVIEWED |
+| 28 | `TRADING_ENGINE.md` | UNREVIEWED |
+| 29 | `RISK_MANAGEMENT.md` | UNREVIEWED |
+| 30 | `BACKTEST_ENGINE.md` | UNREVIEWED |
+| 31 | `COPY_TRADING.md` | UNREVIEWED |
+| 32 | `WORKFLOW_ENGINE.md` | UNREVIEWED |
+| 33 | `REPORTING_SYSTEM.md` | UNREVIEWED |
+| 34 | `USER_ROLES.md` | UNREVIEWED |
+| 35 | `LICENSE_SYSTEM.md` | UNREVIEWED |
+| 36 | `SECURITY.md` | UNREVIEWED |
+| 37 | `LOGGING_STANDARD.md` | UNREVIEWED |
+| 38 | `MONITORING_SYSTEM.md` | UNREVIEWED |
+| 39 | `NOTIFICATION_SYSTEM.md` | UNREVIEWED |
+| 40 | `SCHEDULER.md` | UNREVIEWED |
+| 41 | `BACKUP_RECOVERY.md` | UNREVIEWED |
+| 42 | `DISASTER_RECOVERY.md` | UNREVIEWED |
+| 43 | `DEPLOYMENT.md` | UNREVIEWED |
+| 44 | `PERFORMANCE.md` | UNREVIEWED |
+| 45 | `COMPLIANCE.md` | UNREVIEWED |
+| 46 | `TESTING_STRATEGY.md` | UNREVIEWED |
+| 47 | `UI_UX.md` | UNREVIEWED |
+| 48 | `ROADMAP.md` | UNREVIEWED |
+| 49 | `GLOSSARY.md` | UNREVIEWED |
+| 50 | `INDEX.md` | GOVERNANCE INDEX |
+
+---
+
+# Canonical Foundation Order
+
+```text
+01_VISION
+   ↓
+PLATFORM_PHILOSOPHY
+   ↓
+PROJECT_CONSTITUTION
+   ↓
+SYSTEM_DESIGN
+   ↓
+ARCHITECTURE
+   ↓
+MODULE_SPECIFICATION
+   ↓
+DATABASE_DESIGN / DATABASE_REVIEW / ERD
+   ↓
+DATA_FLOW / API / EVENT / INTEGRATION
+   ↓
+AI / MULTI_PLATFORM / PLUGIN
+   ↓
+TRADING / RISK / BACKTEST / COPY_TRADING / WORKFLOW
+   ↓
+SECURITY / TESTING / OPERATIONS / DEPLOYMENT
+   ↓
+IMPLEMENTATION
+```
+
+Dokumen tidak boleh dianggap selesai hanya karena file telah dibuat. Status `LOCKED` memerlukan review dan acceptance criteria.
+
+---
+
+# Source of Truth
+
+Repository Git `AsephendrikS/OHTATS` adalah sumber kebenaran aktif proyek. Chat, local notes, atau AI session hanya menjadi baseline setelah keputusan tersebut tercatat di repository sesuai governance.
+
+---
+
+# END OF INDEX.md
