@@ -1,226 +1,474 @@
 # OHTATS Architecture
 
-> Dokumen ini menjelaskan arsitektur teknis OH-TRADER AI Trading System (OHTATS).
+> Dokumen ini mendefinisikan arsitektur teknis tingkat platform OHTATS dan menjadi referensi hubungan antar-layer, dependency, boundary, serta integrasi. `SYSTEM_DESIGN.md` mendefinisikan fungsi sistem tingkat tinggi; dokumen ini menetapkan bentuk hubungan teknisnya.
 
 ---
 
-# 1. Tujuan
+# Status
 
-Dokumen ini menjelaskan bagaimana seluruh komponen OHTATS saling terhubung.
+**ARCHITECTURE BASELINE — REVIEW**
 
-Architecture menjelaskan hubungan antar modul, sedangkan System Design menjelaskan fungsi masing-masing modul.
+**Version:** 1.0.0
+
+**Authority:** Technical architecture reference
 
 ---
 
-# 2. Prinsip Arsitektur
+# 1. Architecture Principles
 
-Arsitektur OHTATS dibangun berdasarkan prinsip berikut:
+OHTATS mengikuti prinsip:
 
 - Modular
-- Layered Architecture
-- Event Driven
-- API First
-- Plugin Based
-- AI Agnostic
-- Multi Platform
-- Secure by Design
-- High Availability
-- High Performance
+- Layered
+- Event-driven
+- API-first
+- Plugin-based
+- Provider-agnostic
+- Platform-agnostic
+- Secure by design
+- Risk-first
+- Auditable
+- Reproducible
+- Scalable
+- Maintainable
+- Extensible
 
 ---
 
-# 3. Layer Arsitektur
+# 2. System Boundary
 
-OHTATS dibangun menggunakan beberapa layer utama.
+```text
++----------------------------------------------------------------+
+|                         OHTATS PLATFORM                        |
+|                                                                |
+|  Client / Interface                                            |
+|          |                                                     |
+|          v                                                     |
+|  API & Application                                             |
+|          |                                                     |
+|          v                                                     |
+|  Core Orchestration                                            |
+|          |                                                     |
+|          +---- Domain Services                                 |
+|          |       +-- AI                                       |
+|          |       +-- Strategy                                  |
+|          |       +-- Risk                                      |
+|          |       +-- Trading                                   |
+|          |       +-- Market Data                               |
+|          |       +-- Backtest                                  |
+|          |       +-- Workflow                                  |
+|          |       +-- Copy Trading                              |
+|          |       +-- Plugin                                    |
+|          |       +-- Reporting                                 |
+|          |       +-- Security / Audit                          |
+|          |       +-- Licensing                                 |
+|          |       +-- Operations                                |
+|          |                                                     |
+|          v                                                     |
+|  Connector & Integration                                       |
+|          |                                                     |
+|          +---- Persistence & Data                              |
++----------+-----------------------------------------------------+
+           |
+           +---- MT4 / MT5 / TradingView
+           +---- Broker APIs / Exchanges
+           +---- Market Data Providers
+           +---- AI Providers
+           +---- Notification / External Services
+```
 
-1. User Layer
-2. Presentation Layer
-3. API Layer
-4. Business Layer
-5. AI Layer
-6. Trading Layer
-7. Data Layer
-8. Infrastructure Layer
-
----
-
-# 4. Layer Architecture
-
-## 4.1 User Layer
-
-Merupakan lapisan yang digunakan langsung oleh pengguna untuk berinteraksi dengan sistem.
-
-Komponen:
-
-- Desktop Dashboard
-- Web Dashboard
-- Mobile Dashboard
-- Administrator Panel
-
-Tanggung Jawab:
-
-- Menampilkan informasi.
-- Menerima input pengguna.
-- Menampilkan notifikasi.
-- Menampilkan laporan.
-
----
-
-## 4.2 Presentation Layer
-
-Lapisan yang menghubungkan antarmuka pengguna dengan layanan sistem.
-
-Komponen:
-
-- Dashboard Controller
-- Authentication Interface
-- Configuration Interface
-- Monitoring Interface
-
-Tanggung Jawab:
-
-- Mengolah permintaan dari pengguna.
-- Menampilkan data.
-- Validasi awal input pengguna.
+External systems remain outside the OHTATS core boundary. Vendor-specific behavior must be isolated by connector, adapter, provider, or integration contracts.
 
 ---
 
-## 4.3 API Layer
+# 3. Canonical Layers
 
-Lapisan komunikasi antar modul.
+OHTATS uses the following canonical technical layers:
 
-Komponen:
+1. **Client & Interface Layer**
+2. **API & Application Layer**
+3. **Core Orchestration Layer**
+4. **Domain Services Layer**
+5. **Connector & Integration Layer**
+6. **Persistence & Data Layer**
+7. **Infrastructure & Operations Services**
 
-- REST API
-- WebSocket API
-- Internal API
-
-Tanggung Jawab:
-
-- Menyediakan endpoint komunikasi.
-- Mengelola autentikasi API.
-- Mengelola otorisasi.
-- Mengatur pertukaran data antar layanan.
+The layers are architectural boundaries, not necessarily separate deployable processes.
 
 ---
 
-## 4.4 Business Layer
+## 3.1 Client & Interface Layer
 
-Merupakan lapisan inti yang menjalankan logika bisnis OHTATS.
+### Responsibilities
 
-Komponen:
+- Web dashboard
+- Desktop interface
+- Mobile interface
+- Administrative interface
+- External API clients
+- Presentation state
+- User interaction
 
-- Core Engine
+### Rules
+
+- Must not access the database directly.
+- Must not issue broker commands directly.
+- Must communicate through API/application contracts.
+- Must not contain core trading business rules.
+
+---
+
+## 3.2 API & Application Layer
+
+### Responsibilities
+
+- Request entry point
+- Authentication integration
+- Authorization integration
+- Input validation
+- Request/response transformation
+- API versioning
+- Application use cases
+- Configuration requests
+- Strategy requests
+- AI requests
+- Trading requests
+- Backtest requests
+- Workflow requests
+- Reporting requests
+
+### Rules
+
+- May orchestrate use cases but must not bypass domain controls.
+- Must not contain vendor-specific broker logic.
+- Must not directly manipulate persistence internals.
+
+---
+
+## 3.3 Core Orchestration Layer
+
+### Responsibilities
+
+- Command routing
+- Domain coordination
+- Event coordination
+- Workflow triggering
+- Lifecycle coordination
+- Idempotency coordination
+- Process failure handling
+- Policy enforcement coordination
+
+Core Orchestration is a coordinator, not a replacement for domain engines.
+
+### Critical rule
+
+Core orchestration must never provide a bypass around authorization, risk, security, trading, or audit controls.
+
+---
+
+## 3.4 Domain Services Layer
+
+The domain layer contains the capability engines and managers defined by `SYSTEM_DESIGN.md`.
+
+Canonical domains:
+
+- AI Manager
 - Strategy Manager
 - Risk Manager
-- Session Manager
-- Order Manager
-- Position Manager
-
-Tanggung Jawab:
-
-- Mengelola proses bisnis utama.
-- Mengambil keputusan berdasarkan aturan sistem.
-- Mengoordinasikan komunikasi antar modul.
-- Mengelola siklus trading.
-
----
-
-## 4.5 AI Layer
-
-Lapisan yang bertanggung jawab terhadap seluruh proses Artificial Intelligence.
-
-Komponen:
-
-- AI Orchestrator
-- Prompt Manager
-- Memory Manager
-- AI Provider Manager
-- Model Selector
-- AI Cache
-
-Tanggung Jawab:
-
-- Mengelola komunikasi dengan AI Provider.
-- Memilih model AI yang sesuai.
-- Mengelola prompt.
-- Mengelola memori AI.
-- Menyimpan cache respons AI.
-
----
-
-## 4.6 Trading Layer
-
-Lapisan yang berhubungan langsung dengan aktivitas trading.
-
-Komponen:
-
 - Trading Engine
+- Market Data Manager
 - Backtest Engine
-- Forward Test Engine
-- Paper Trading Engine
+- Workflow Engine
 - Copy Trading Engine
-
-Tanggung Jawab:
-
-- Mengeksekusi transaksi.
-- Menjalankan simulasi trading.
-- Mengelola hasil backtest.
-- Mengelola copy trading.
-- Mengelola monitoring posisi.
-
----
-
-## 4.7 Data Layer
-
-Lapisan yang bertanggung jawab mengelola seluruh data dalam sistem.
-
-Komponen:
-
-- Database Manager
-- Data Manager
-- Market Data Service
-- Historical Data Service
-- Configuration Service
-- Cache Service
-
-Tanggung Jawab:
-
-- Menyimpan data.
-- Mengambil data.
-- Mengelola data historis.
-- Mengelola konfigurasi.
-- Mengelola cache sistem.
-- Menjamin integritas data.
-
----
-
-## 4.8 Infrastructure Layer
-
-Lapisan yang menyediakan layanan pendukung agar sistem dapat berjalan dengan baik.
-
-Komponen:
-
-- Connector Manager
 - Plugin Manager
-- Logging Manager
-- Audit Manager
 - Notification Manager
+- Reporting Manager
+- Security & Audit Manager
+- Licensing & Subscription Manager
+- Operations Manager
+
+Each domain owns its responsibility and communicates through explicit service/event contracts.
+
+---
+
+## 3.5 Connector & Integration Layer
+
+### Responsibilities
+
+- Broker connectivity
+- Platform connectivity
+- Market-data connectivity
+- AI provider connectivity
+- Notification provider connectivity
+- External service connectivity
+- Protocol translation
+- Capability detection
+- Connection health
+- Reconnect handling
+
+### Rules
+
+External/vendor-specific models must not leak into core domain contracts unless explicitly normalized into a canonical model.
+
+---
+
+## 3.6 Persistence & Data Layer
+
+### Responsibilities
+
+- Transactional persistence
+- Market data storage
+- Backtest data
+- Audit/event records
+- Configuration persistence
+- Retention
+- Backup/recovery integration
+
+Canonical persistent entities follow `DATABASE_DESIGN.md` and `ERD.md`.
+
+### Rules
+
+- UI does not access persistence directly.
+- Vendor-specific storage schemas must not become canonical domain entities without architectural review.
+- Historical financial records are immutable according to database rules.
+
+---
+
+## 3.7 Infrastructure & Operations Services
+
+Infrastructure services support the runtime without becoming the owner of business-domain state.
+
+Examples:
+
+- Logging
+- Monitoring
 - Scheduler
-- Security Service
-- Backup Service
-- Monitoring Service
+- Cache
+- Queue/event transport
+- Backup/restore
+- Secret management
+- Runtime configuration
+- Operational health
 
-Tanggung Jawab:
+Transient infrastructure state does not automatically become a persistent master entity.
 
-- Mengelola koneksi ke platform eksternal.
-- Mengelola plugin.
-- Mengelola log sistem.
-- Mengelola audit.
-- Mengelola notifikasi.
-- Menjalankan scheduler.
-- Menjaga keamanan sistem.
-- Melakukan backup.
-- Melakukan monitoring kesehatan sistem.
+---
 
-Setiap layer memiliki tanggung jawab yang berbeda dan tidak boleh mengambil tanggung jawab layer lainnya.
+# 4. Dependency Rules
+
+Dependency direction must remain controlled:
+
+```text
+Client
+  ↓
+API / Application
+  ↓
+Core Orchestration
+  ↓
+Domain Services
+  ↓
+Connector / Persistence contracts
+  ↓
+External Systems / Storage
+```
+
+Rules:
+
+1. Higher layers may depend on documented contracts of lower layers.
+2. Lower layers must not depend upward on presentation concerns.
+3. Domain logic must not depend directly on vendor-specific implementations.
+4. External integrations must use adapters/connectors/providers.
+5. AI providers must be accessed through provider abstractions.
+6. Trading platforms and brokers must be accessed through connector abstractions.
+7. Persistence must be accessed through repository/service contracts where appropriate.
+8. Cross-domain access must use explicit service or event contracts.
+9. Circular dependencies are prohibited.
+10. A plugin must not bypass capability, security, risk, or audit boundaries.
+
+---
+
+# 5. Trading Architecture Boundary
+
+All executable trading actions follow one canonical pipeline:
+
+```text
+User / Strategy / Workflow / Copy Trading / AI
+                    |
+                    v
+             Trading Request
+                    |
+                    v
+              Validation
+                    |
+                    v
+             Policy / Auth
+                    |
+                    v
+             Risk Evaluation
+                    |
+             +------+------+
+             |             |
+           Reject        Approve
+             |             |
+             v             v
+           Audit      Order Creation
+                           |
+                           v
+                       Connector
+                           |
+                           v
+                    Broker / Platform
+                           |
+                           v
+                     Execution / Deal
+                           |
+                           v
+                        Position
+                           |
+                           v
+                      Events / Audit
+```
+
+No AI, workflow, plugin, copy-trading, or application endpoint may create a broker command outside this control path.
+
+---
+
+# 6. AI Architecture Boundary
+
+AI is a capability provider, not a privileged execution channel.
+
+```text
+AI Request
+   ↓
+AI Provider Abstraction
+   ↓
+AI Response / Analysis
+   ↓
+Structured Decision
+   ↓
+Strategy / Policy Validation
+   ↓
+Risk Evaluation
+   ↓
+Trading Pipeline (if applicable)
+```
+
+AI provider replacement must not require changes to the core domain model.
+
+---
+
+# 7. Backtest Boundary
+
+Backtest is isolated from live execution:
+
+```text
+Strategy Version
+      ↓
+Dataset Version
+      ↓
+Backtest Run
+      ↓
+Simulated Trades
+      ↓
+Metrics
+      ↓
+Report
+```
+
+Backtest must not silently produce live broker commands.
+
+---
+
+# 8. Copy Trading Boundary
+
+```text
+Master Event
+     ↓
+Copy Rule
+     ↓
+Symbol Mapping
+     ↓
+Follower Risk Policy
+     ↓
+Trading Request
+     ↓
+Normal Trading Pipeline
+```
+
+Copy trading must not create a privileged execution path.
+
+---
+
+# 9. Event & Audit Architecture
+
+Events support:
+
+- asynchronous processing;
+- workflow triggering;
+- integration;
+- monitoring;
+- lifecycle coordination;
+- audit support.
+
+Events are not a replacement for authoritative persistent financial state.
+
+Critical operations must be auditable, including authentication/security changes, configuration changes, strategy publication/deployment, risk changes, trading requests, order lifecycle, relevant AI decisions, copy-trading actions, licensing changes, and administrative actions.
+
+---
+
+# 10. Security Architecture
+
+Security is cross-cutting across all layers:
+
+```text
+Identity
+  ↓
+Authentication
+  ↓
+Authorization
+  ↓
+Policy
+  ↓
+Capability
+  ↓
+Domain Action
+  ↓
+Audit
+```
+
+Secrets and credentials must remain inside the security boundary and must not be stored as ordinary business data in plaintext.
+
+---
+
+# 11. Architecture Acceptance Criteria
+
+Architecture is ready for approval when:
+
+- canonical layers are unambiguous;
+- dependency direction is documented;
+- external systems are isolated behind connectors/providers;
+- AI cannot bypass controls;
+- trading follows one canonical control pipeline;
+- backtest and copy trading boundaries are explicit;
+- persistence follows the database baseline;
+- event/audit responsibility is clear;
+- plugin capability boundaries are explicit;
+- and the architecture is consistent with `SYSTEM_DESIGN.md`.
+
+---
+
+# 12. Related Blueprints
+
+- `01_VISION.md`
+- `PROJECT_CONSTITUTION.md`
+- `PLATFORM_PHILOSOPHY.md`
+- `SYSTEM_DESIGN.md`
+- `MODULE_SPECIFICATION.md`
+- `DATABASE_DESIGN.md`
+- `DATABASE_REVIEW.md`
+- `ERD.md`
+- `ARCHITECTURE_DECISIONS.md`
+
+---
+
+# END OF ARCHITECTURE.md
