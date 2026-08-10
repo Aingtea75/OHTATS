@@ -62,7 +62,10 @@ Client / API / MCP / Plugin / AI / Workflow
         Audit / Observability
 ```
 
-Security & Audit Manager mengorkestrasi identity, access policy, security events, dan audit governance.
+Security controls bersifat cross-cutting dan diterapkan melalui komponen serta boundary yang ditetapkan oleh Architecture dan domain blueprint terkait.
+
+Dokumen ini tidak memperkenalkan Security & Audit Manager sebagai module atau domain owner baru.
+
 Domain engines tetap memiliki ownership domain masing-masing.
 
 ---
