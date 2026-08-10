@@ -8,6 +8,8 @@
 
 # Status
 
+**Status:** REVIEW
+
 **TRADING ENGINE BLUEPRINT — BASELINE**
 
 **Version:** 1.0.0

@@ -2,7 +2,9 @@
 
 > Canonical blueprint for master/follower trading replication. Copy Trading creates follower trading requests; it does not own trading, risk, order, execution, deal, or position lifecycle.
 
-**Status:** COPY TRADING BLUEPRINT — BASELINE
+**Status:** REVIEW
+
+**COPY TRADING BLUEPRINT — BASELINE**
 
 **Version:** 1.0.0
 

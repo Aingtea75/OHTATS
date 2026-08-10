@@ -2,7 +2,9 @@
 
 > Canonical blueprint for deterministic, reproducible, isolated historical simulation. Backtest execution MUST remain separated from live trading execution and live operational state.
 
-**Status:** BACKTEST ENGINE BLUEPRINT — BASELINE
+**Status:** REVIEW
+
+**BACKTEST ENGINE BLUEPRINT — BASELINE**
 
 **Version:** 1.0.0
 
