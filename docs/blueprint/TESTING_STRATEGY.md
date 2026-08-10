@@ -76,15 +76,16 @@ canonical, atau pelaksanaan live trading di environment uji.
 # 4. Test Pyramid
 
 ```text
-                   /\\n                  /  \\
-                 / E2E \\
-                /------\\
-               / System  \\
-              /----------\\
-             / Integration \\
-            /--------------\\
-           /   Unit Tests   \\
-          /------------------\\
+                   /\
+                  /  \
+                 / E2E \
+                /------\
+               / System  \
+              /----------\
+             / Integration \
+            /--------------\
+           /   Unit Tests   \
+          /------------------\
 ```
 
 - **Unit** — mayoritas, cepat, fokus logic murni.
@@ -228,11 +229,29 @@ Paper trading memerlukan konfigurasi environment yang eksplisit dan terpisah.
 
 # 13. Forward Testing
 
-Forward testing berjalan di masa depan dengan data real-time atau near-real-time,
-namun tetap non-live execution kecuali diizinkan secara eksplisit oleh governance
-dan environment control.
+Forward Testing adalah pengujian ke depan menggunakan data real-time atau
+near-real-time **tanpa menempatkan live broker command**.
 
-Forward testing tidak menggantikan Risk Gate atau authorization.
+Aturan wajib:
+
+- Forward Testing **tetap NON-LIVE**.
+- Forward Testing **tidak boleh** mengirim order, cancel, atau command apapun
+  ke broker/platform produksi.
+- Forward Testing tetap melewati Risk Gate, authorization, dan canonical
+  Trading Engine path dalam mode non-live / simulated execution.
+- Forward Testing tidak menggantikan Risk Gate atau authorization.
+
+Jika di masa depan project membutuhkan **controlled live experiment**
+(misalnya limited live canary), hal tersebut **bukan** bagian dari Forward
+Testing. Controlled live experiment adalah kategori/governance terpisah yang
+memerlukan:
+
+1. explicit governance approval;
+2. environment control yang terpisah;
+3. safety gate (Risk Gate, kill-switch, audit) yang aktif;
+4. dokumentasi dan evidence yang dapat diaudit.
+
+Controlled live experiment tidak boleh disamarkan sebagai Forward Testing.
 
 ---
 
@@ -410,10 +429,12 @@ Environment wajib dipisahkan:
 | Integration | No          | No (test DB)  | No                 |
 | System/E2E  | No          | No            | No                 |
 | Paper       | No          | Dedicated     | Dedicated non-prod |
-| Forward     | Controlled  | Dedicated     | Dedicated          |
+| Forward     | No          | Dedicated     | Dedicated non-prod |
 | Live        | Yes         | Yes           | Yes (controlled)   |
 
-Production credentials tidak boleh digunakan di unit/integration/system tests.
+Production credentials tidak boleh digunakan di unit/integration/system/paper/forward tests.
+
+Controlled live experiment (bila suatu saat disetujui governance) bukan bagian dari baris Forward di atas dan memerlukan approval serta environment control terpisah.
 
 ---
 
@@ -449,6 +470,7 @@ Testing Strategy diterima sebagai baseline REVIEW jika:
 - Risk Gate dapat diuji deterministic;
 - AI / Workflow / Connector tidak diberi bypass;
 - backtest dan simulation terisolasi;
+- Forward Testing didefinisikan sebagai NON-LIVE;
 - CI quality gates didefinisikan;
 - tidak bertentangan dengan Constitution dan Architecture.
 
