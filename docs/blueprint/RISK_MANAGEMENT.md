@@ -8,6 +8,8 @@
 
 # Status
 
+**Status:** REVIEW
+
 **RISK MANAGEMENT BLUEPRINT — BASELINE**
 
 **Version:** 1.0.0
