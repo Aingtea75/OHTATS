@@ -1,6 +1,6 @@
 OHTATS AI Council Protocol
 
-Status: DRAFT
+Status: REVIEW
 Version: 1.0
 Canonical Path: docs/blueprint/A_COUNCIL_PROTOCOL.md
 Parent Governance: PROJECT_CONSTITUTION.md
@@ -638,7 +638,7 @@ No contradiction with canonical OHTATS blueprint documents remains unresolved.
 
 30. Initial Status
 
-Status: DRAFT
+Status: REVIEW
 Version: 1.0
 Review Required: YES
 Lock Status: NOT LOCKED
