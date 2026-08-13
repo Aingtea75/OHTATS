@@ -1,0 +1,29 @@
+﻿{
+  "test_id": "COUNCIL-003",
+  "title": "Critical objection blocks consensus",
+  "proposal_id": "PROP-003",
+  "reviews": [
+    {
+      "provider": "ChatGPT",
+      "recommendation": "APPROVE",
+      "critical_objection": false
+    },
+    {
+      "provider": "Claude",
+      "recommendation": "APPROVE",
+      "critical_objection": false
+    },
+    {
+      "provider": "Grok",
+      "recommendation": "APPROVE",
+      "critical_objection": false
+    },
+    {
+      "provider": "RiskReview",
+      "recommendation": "REVIEW_REQUIRED",
+      "critical_objection": true
+    }
+  ],
+  "expected_consensus": "BLOCKED",
+  "expected_owner_decision": "REQUEST_REVISION"
+}

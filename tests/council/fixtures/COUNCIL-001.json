@@ -1,0 +1,24 @@
+﻿{
+  "test_id": "COUNCIL-001",
+  "title": "Conditional consensus",
+  "proposal_id": "PROP-001",
+  "reviews": [
+    {
+      "provider": "ChatGPT",
+      "recommendation": "APPROVE",
+      "critical_objection": false
+    },
+    {
+      "provider": "Claude",
+      "recommendation": "APPROVE_WITH_CONDITIONS",
+      "critical_objection": false
+    },
+    {
+      "provider": "Grok",
+      "recommendation": "APPROVE",
+      "critical_objection": false
+    }
+  ],
+  "expected_consensus": "CONDITIONAL",
+  "expected_owner_decision": "APPROVE_WITH_CONDITIONS"
+}

@@ -1,0 +1,27 @@
+﻿{
+  "test_id": "COUNCIL-005",
+  "title": "Full consensus",
+  "proposal_id": "PROP-005",
+  "reviews": [
+    {
+      "provider": "ChatGPT",
+      "recommendation": "APPROVE",
+      "critical_objection": false
+    },
+    {
+      "provider": "Claude",
+      "recommendation": "APPROVE",
+      "critical_objection": false
+    },
+    {
+      "provider": "Grok",
+      "recommendation": "APPROVE",
+      "critical_objection": false
+    }
+  ],
+  "acceptance_criteria": {
+    "mandatory_satisfied": true
+  },
+  "expected_consensus": "REACHED",
+  "expected_owner_decision": "APPROVE"
+}
