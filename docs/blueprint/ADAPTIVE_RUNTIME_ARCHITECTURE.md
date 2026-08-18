@@ -8,7 +8,7 @@
 
 **ADAPTIVE RUNTIME ARCHITECTURE — REVIEW**
 
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Authority:** Cross-domain architecture reference; canonical risk decisions remain with Risk Management.
 
@@ -57,7 +57,7 @@ Inputs must be timestamped and freshness-checked.
 
 # 4. Market Quality Abstraction
 
-Market quality is a normalized contextual abstraction:
+Market quality is a normalized contextual abstraction describing **execution/data conditions**, not the structural market regime.
 
 ```text
 Market Quality
@@ -73,7 +73,9 @@ Market Quality
 
 The abstraction must distinguish unavailable data from good quality.
 
-`UNKNOWN` or stale quality must be represented explicitly and may cause stricter downstream behavior.
+`UNKNOWN`, stale, degraded, or disordered quality must be represented explicitly and may cause stricter downstream behavior.
+
+Canonical market-quality conditions include, as applicable, `NORMAL`, `WIDE_SPREAD`, `LOW_LIQUIDITY`, `HIGH_SLIPPAGE`, `STALE`, `DISORDERED`, and `UNKNOWN`. These conditions do not replace or redefine the structural regime states in `MARKET_REGIME_ARCHITECTURE.md`.
 
 # 5. Event Risk Abstraction
 
@@ -316,7 +318,8 @@ R3.16 adaptive runtime is ready for implementation only when:
 - hysteresis/cooldown/recovery are deterministic;
 - failure semantics are fail-safe;
 - audit evidence is sufficient to reconstruct decisions;
-- integration with Risk Manager and Trading Engine is contractually defined.
+- integration with Risk Manager and Trading Engine is contractually defined;
+- the boundary between structural regime and market-quality conditions is preserved.
 
 # 18. Non-Goals
 
