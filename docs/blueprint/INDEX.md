@@ -64,6 +64,11 @@
 | 53 | `INDEX.md` | GOVERNANCE INDEX |
 | 54 | `A_COUNCIL_PROTOCOL.md` | DRAFT / COUNCIL GOVERNANCE |
 | 55 | `ADR-007-R3.14-R3.16-ARCHITECTURE-RECONCILIATION.md` | REVIEW |
+| 56 | `MARKET_REGIME_ARCHITECTURE.md` | REVIEW / R3.16 FORMALIZATION |
+| 57 | `ADAPTIVE_RUNTIME_ARCHITECTURE.md` | REVIEW / R3.16 FORMALIZATION |
+| 58 | `STAGE4-R3.14-R3.16-RECONCILIATION.md` | REVIEW / STAGE RECORD |
+| 59 | `ADR-008-STAGE4-R3.14-R3.16-RECONCILIATION.md` | REVIEW |
+| 60 | `R3.15-CROSS-ACCOUNT-RISK-CONTRACT.md` | REVIEW / R3.15 CONTRACT |
 
 ---
 
@@ -90,6 +95,8 @@ AI / MULTI_PLATFORM / PLUGIN
    ↓
 TRADING / RISK / BACKTEST / COPY_TRADING / WORKFLOW
    ↓
+MARKET REGIME / ADAPTIVE RUNTIME
+   ↓
 SECURITY / TESTING / OPERATIONS / DEPLOYMENT
    ↓
 IMPLEMENTATION
@@ -101,7 +108,7 @@ Dokumen tidak boleh dianggap selesai hanya karena file telah dibuat. Status `LOC
 
 # Source of Truth
 
-Repository Git `AsephendrikS/OHTATS` adalah sumber kebenaran aktif proyek. Chat, local notes, atau AI session hanya menjadi baseline setelah keputusan tersebut tercatat di repository sesuai governance.
+Repository Git `Aingtea75/OHTATS` adalah sumber kebenaran aktif proyek. Chat, local notes, atau AI session hanya menjadi baseline setelah keputusan tersebut tercatat di repository sesuai governance.
 
 ---
 
