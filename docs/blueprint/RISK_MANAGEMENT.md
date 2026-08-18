@@ -12,7 +12,7 @@
 
 **RISK MANAGEMENT BLUEPRINT — BASELINE**
 
-**Version:** 1.1.0
+**Version:** 1.1.1
 
 **Authority:** Risk-control domain reference
 
@@ -641,7 +641,27 @@ Regime / Market Quality / Event Risk
 
 Risk Management may invalidate or constrain an adaptive risk envelope whenever material context changes.
 
-# 33. Extended Acceptance Criteria
+# 33. R3.15 — Cross-Account Exposure Contract
+
+Cross-account exposure is a governed risk scope when multiple trading accounts contribute to a shared user, tenant, portfolio, strategy/deployment, instrument, broker, or platform exposure.
+
+Every cross-account evaluation must resolve an explicit account set. Accounts outside that scope must not silently contribute, and the resolved account set must be part of the decision context.
+
+Before aggregation, exposure must be normalized as applicable for canonical instrument identity, side/direction, quantity/volume, notional value, account currency, valuation/conversion source and timestamp, leverage/margin basis, pending-order exposure, and realized/unrealized loss. Source-account identity must remain attached so aggregate exposure is decomposable.
+
+Applicable policies may define shared limits for aggregate notional, aggregate quantity by instrument, net/gross directional exposure, aggregate margin/leverage, aggregate loss/drawdown, concentration by instrument/strategy/broker/platform, and maximum simultaneously exposed accounts.
+
+Projected cross-account exposure includes existing positions, pending orders, and the requested action. Concurrent individually-valid requests must not collectively bypass a shared limit.
+
+Cross-account evaluation participates in concurrency protection through reservation, serialization, or deterministic revalidation. A race that permits aggregate exposure to exceed a shared limit is a risk-control failure.
+
+Aggregation fails closed when mandatory account members, valuation inputs, exposure state, or conversion data are unavailable, stale beyond policy thresholds, contradictory, or unsafe to resolve. An incomplete account set must not silently be treated as complete unless an explicit approved policy permits it.
+
+Material cross-account evaluations must record the evaluation identifier, resolved account-set reference, policy/version, aggregation method/version, normalization/conversion references, shared limits evaluated, concentration metrics where applicable, projected aggregate exposure, concurrency state, stale/missing-data conditions, final decision, and reason codes.
+
+This contract remains subordinate to Risk Management. It does not create a second risk authority and does not alter Trading Engine lifecycle ownership, connector authority, ADR-006 binding, or canonical database ownership.
+
+# 34. Extended Acceptance Criteria
 
 R3.14/R3.15 extensions are ready for architecture approval only when:
 
@@ -651,5 +671,6 @@ R3.14/R3.15 extensions are ready for architecture approval only when:
 - requested/approved/constrained/effective risk states are distinct;
 - SAFE/ACTIVE profile semantics are explicit;
 - emergency recovery has deterministic clearing and resume conditions;
+- cross-account exposure scope and aggregation semantics are explicit;
 - R3.16 context enters through Risk Management without creating competing authority;
 - all additions remain compatible with ADR-006 and canonical database ownership.
