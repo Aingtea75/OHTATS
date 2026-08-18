@@ -101,7 +101,7 @@ Dokumen tidak boleh dianggap selesai hanya karena file telah dibuat. Status `LOC
 
 # Source of Truth
 
-Repository Git `Aingtea75/OHTATS` adalah sumber kebenaran aktif proyek. Chat, local notes, atau AI session hanya menjadi baseline setelah keputusan tersebut tercatat di repository sesuai governance.
+Repository Git `AsephendrikS/OHTATS` adalah sumber kebenaran aktif proyek. Chat, local notes, atau AI session hanya menjadi baseline setelah keputusan tersebut tercatat di repository sesuai governance.
 
 ---
 
