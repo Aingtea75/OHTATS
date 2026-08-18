@@ -8,7 +8,7 @@
 
 **MARKET REGIME ARCHITECTURE — REVIEW**
 
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Authority:** Market / Strategy Runtime architecture reference
 
@@ -37,19 +37,18 @@ No regime component may directly submit, modify, or cancel a broker order.
 
 # 3. Canonical Regime States
 
-The baseline state vocabulary is:
+Regime describes **market structure**, not market quality. The baseline structural state vocabulary is:
 
 - `TRENDING`
 - `RANGING`
 - `BREAKOUT`
-- `HIGH_VOLATILITY`
-- `LOW_LIQUIDITY`
-- `DISORDERED`
 - `UNKNOWN`
 
-Implementations may use a richer internal model, but externally exposed states must map deterministically to the canonical vocabulary or an approved extension.
+`HIGH_VOLATILITY`, `LOW_LIQUIDITY`, and `DISORDERED` are **market-quality conditions**, not canonical regime states. They are represented by the Market Quality abstraction defined in `ADAPTIVE_RUNTIME_ARCHITECTURE.md` and may influence regime confidence, eligibility, execution, and risk without changing the structural regime classification.
 
-`UNKNOWN` is the fail-safe state when required evidence is unavailable, stale, contradictory, or below the detector's minimum confidence threshold.
+Implementations may use a richer internal model, but externally exposed structural states must map deterministically to the canonical vocabulary or an approved extension.
+
+`UNKNOWN` is the fail-safe state when required structural evidence is unavailable, stale, contradictory, or below the detector's minimum confidence threshold.
 
 # 4. Regime Evidence
 
@@ -171,6 +170,8 @@ Market Regime
 
 Consumers must treat regime as contextual input and must preserve their own authority boundaries.
 
+Market-quality conditions are consumed alongside regime rather than represented as alternate regime states.
+
 # 11. Safety Rules
 
 1. Regime does not equal signal.
@@ -179,6 +180,7 @@ Consumers must treat regime as contextual input and must preserve their own auth
 4. `UNKNOWN` must not be interpreted as normal market conditions.
 5. Regime history must remain auditable.
 6. Detector/model changes must be versioned.
+7. Market-quality deterioration must not be hidden by a stable structural regime state.
 
 # 12. Acceptance Criteria
 
@@ -191,6 +193,7 @@ This architecture is ready for approval only when:
 - downstream interfaces are identified;
 - risk authority remains with Risk Manager;
 - no direct broker execution path exists from regime detection;
+- market regime and market-quality boundaries are explicitly preserved;
 - implementation tests can reproduce a fixed detector version and evidence set.
 
 # 13. Non-Goals
