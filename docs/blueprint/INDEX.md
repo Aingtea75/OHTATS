@@ -63,6 +63,7 @@
 | 52 | `INTERNATIONALIZATION.md` | REVIEW |
 | 53 | `INDEX.md` | GOVERNANCE INDEX |
 | 54 | `A_COUNCIL_PROTOCOL.md` | DRAFT / COUNCIL GOVERNANCE |
+| 55 | `ADR-007-R3.14-R3.16-ARCHITECTURE-RECONCILIATION.md` | REVIEW |
 
 ---
 
@@ -100,7 +101,7 @@ Dokumen tidak boleh dianggap selesai hanya karena file telah dibuat. Status `LOC
 
 # Source of Truth
 
-Repository Git `AsephendrikS/OHTATS` adalah sumber kebenaran aktif proyek. Chat, local notes, atau AI session hanya menjadi baseline setelah keputusan tersebut tercatat di repository sesuai governance.
+Repository Git `Aingtea75/OHTATS` adalah sumber kebenaran aktif proyek. Chat, local notes, atau AI session hanya menjadi baseline setelah keputusan tersebut tercatat di repository sesuai governance.
 
 ---
 
